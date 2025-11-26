@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samfunnssimulatoren</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: white;
+            padding: 20px;
+        }
+
+        /* --- Simulator Specifics --- */
+        .sim-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+            gap: 8px;
+            max-height: 350px;
+            overflow-y: auto;
+            perspective: 1000px;
+        }
+        .sim-item {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .sim-item:hover { transform: scale(1.1) rotate(5deg); background: rgba(255,255,255,0.2); }
+        
+        .sim-log {
+            font-family: 'Courier New', monospace; font-size: 0.85rem;
+            height: 180px; overflow-y: auto;
+            background: #020617; color: #34d399;
+            padding: 15px; border-radius: 12px;
+            border: 1px solid #1e293b;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+        }
+        .floating-text {
+            position: absolute; pointer-events: none;
+            font-weight: bold; font-size: 1.2rem;
+            animation: floatUp 1s ease-out forwards;
+            z-index: 50; text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .btn-disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake-anim { animation: shake 0.3s ease-in-out; }
+        
+        /* Utility */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="max-w-7xl mx-auto h-screen flex flex-col">
+
+    <!-- NAV -->
+    <nav class="flex justify-between items-center mb-6">
+        <a href="index.html" class="flex items-center gap-2 text-indigo-400 hover:text-white transition-colors font-bold">
+            <span>←</span> Tilbake til lærebok
+        </a>
+        <div class="text-xs text-slate-500 font-mono">Build v2.0</div>
+    </nav>
+
+    <!-- SIMULATOR CONTAINER -->
+    <main class="flex-grow bg-slate-900 rounded-2xl border border-slate-700 p-6 relative overflow-hidden shadow-2xl">
+            <!-- Background Decoration -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+            <div class="absolute -bottom-8 -left-8 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+
+            <!-- Header -->
+            <div class="mb-6 border-b border-gray-700 pb-4 flex flex-col md:flex-row justify-between items-start gap-4 relative z-10">
+                <div>
+                    <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-2">Samfunnssimulatoren</h2>
+                    <p class="text-gray-400 text-sm">Strategi: Start med <strong>Gårder</strong> for å overleve. Bygg <strong>Fabrikker</strong> senere for rikdom.</p>
+                </div>
+                <div class="text-right flex gap-3">
+                    <button onclick="resetSim()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold shadow-lg transition-all text-sm">
+                        🔄 Reset
+                    </button>
+                    <button onclick="togglePause()" id="sim-pause-btn" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg font-bold shadow-lg transition-all text-sm hidden">
+                        ⏸️ Pause
+                    </button>
+                </div>
+            </div>
+            
+            <!-- PROGRESS BAR & PHASE -->
+            <div class="mb-8 relative z-10 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                <div class="flex justify-between items-end mb-2">
+                    <div>
+                        <span class="text-xs text-gray-400 uppercase font-bold block mb-1">Nåværende Fase</span>
+                        <span id="sim-phase-text" class="text-2xl font-black text-white">Fase 1: Jordbrukssamfunn</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-gray-400 uppercase font-bold block mb-1">Score / Neste Mål</span>
+                        <div class="text-xl font-mono"><span id="sim-score-display" class="text-blue-400">0</span> / <span id="sim-next-goal" class="text-gray-500">100</span></div>
+                    </div>
+                </div>
+                <div class="w-full bg-gray-900 rounded-full h-6 overflow-hidden border border-gray-600 relative">
+                    <div id="sim-progress" class="bg-gradient-to-r from-green-500 via-yellow-500 to-indigo-500 h-full w-0 transition-all duration-1000 relative">
+                        <div class="absolute right-0 top-0 bottom-0 w-1 bg-white animate-pulse"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-[10px] text-gray-500 mt-1 uppercase font-bold px-1">
+                    <span>Jordbruk</span>
+                    <span>Vekst</span>
+                    <span>Industri</span>
+                    <span>Moderne</span>
+                    <span>Fremtid</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
+                
+                <!-- LEFT COLUMN: CITY & STATS (7 cols) -->
+                <div class="lg:col-span-7 space-y-4">
+                    <!-- City View -->
+                    <div id="sim-city-container" class="bg-stone-900 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000">
+                        <div class="absolute top-2 right-4 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Din Sivilisasjon</div>
+                        <div id="sim-city-view" class="sim-grid p-2"></div>
+                        
+                        <!-- PASSWORD OVERLAY (Layer 1 - Top Most) -->
+                        <div id="sim-password-overlay" class="absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center text-center p-6">
+                            <div class="text-6xl mb-4 text-indigo-500">🔒</div>
+                            <h3 class="text-2xl font-bold text-white mb-2">Simulator Låst</h3>
+                            <p class="text-gray-400 mb-6 text-sm">Denne delen er passordbeskyttet.</p>
+                            
+                            <div class="relative w-full max-w-xs">
+                                <input type="password" id="sim-pass-input" 
+                                    class="w-full bg-slate-800 border-2 border-slate-700 text-white px-4 py-3 rounded-lg mb-4 text-center focus:outline-none focus:border-indigo-500 transition-colors placeholder-gray-500 font-mono tracking-widest" 
+                                    placeholder="Skriv passord..." onkeyup="if(event.key === 'Enter') checkSimPassword()">
+                            </div>
+                            
+                            <button onclick="checkSimPassword()" class="px-8 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all transform active:scale-95 shadow-lg">
+                                Lås opp
+                            </button>
+                            <p id="pass-error" class="text-red-500 text-xs mt-3 font-bold hidden">Feil passord! Prøv "økonomi"</p>
+                        </div>
+
+                        <!-- START OVERLAY (Layer 2) -->
+                        <div id="sim-start-overlay" class="absolute inset-0 bg-slate-900/90 z-40 flex flex-col items-center justify-center text-center p-6 backdrop-blur-md transition-all duration-500">
+                            <div class="text-6xl mb-4 animate-bounce">🌍</div>
+                            <h3 class="text-3xl font-black text-white mb-2 uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Klar til start?</h3>
+                            <p class="text-gray-300 mb-8 max-w-md text-sm leading-relaxed">
+                                Du starter som høvding i et fattig jordbrukssamfunn. <br>
+                                <span class="text-amber-400">Mål:</span> Bygg gårder for å overleve.<br>
+                                <span class="text-indigo-400">Drøm:</span> Industrialiser og bli rik.
+                            </p>
+                            <button onclick="startSim()" class="px-10 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-black rounded-full text-xl shadow-2xl shadow-green-900/50 transform hover:scale-110 transition-all flex items-center gap-3 ring-4 ring-green-500/30">
+                                <span>▶️</span> START SPILLET
+                            </button>
+                        </div>
+                        
+                        <!-- Modal Overlay (Game Over/Win) -->
+                        <div id="sim-modal" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-center hidden p-8 z-50 backdrop-blur-md">
+                            <div id="sim-modal-icon" class="text-6xl mb-4 animate-bounce"></div>
+                            <h3 id="sim-modal-title" class="text-2xl font-black text-white mb-2 uppercase"></h3>
+                            <p id="sim-modal-desc" class="text-sm text-gray-300 mb-6 max-w-md leading-relaxed"></p>
+                            <div id="sim-modal-buttons" class="flex gap-4">
+                                <button onclick="resetSim()" class="px-6 py-2 bg-white text-black font-bold rounded-full hover:bg-indigo-50 text-sm">Start på nytt</button>
+                                <button id="btn-continue" onclick="continueGame()" class="hidden px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-full hover:from-green-500 hover:to-emerald-500 text-sm border border-green-400 shadow-lg">Fortsett å bygge imperiet</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <!-- Pop -->
+                        <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
+                            <div class="text-[10px] text-blue-400 font-bold uppercase mb-1">Befolkning</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-pop">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-blue-900"><div id="bar-pop" class="h-full bg-blue-500" style="width: 0%"></div></div>
+                        </div>
+                        <!-- Food -->
+                        <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
+                            <div class="text-[10px] text-green-400 font-bold uppercase mb-1">Matlager</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-food">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-green-900"><div id="bar-food" class="h-full bg-green-500" style="width: 0%"></div></div>
+                        </div>
+                        <!-- Farms -->
+                        <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
+                            <div class="text-[10px] text-amber-400 font-bold uppercase mb-1">Gårder 🌾</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-farms">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-amber-900"><div id="bar-farms" class="h-full bg-amber-500" style="width: 0%"></div></div>
+                        </div>
+                         <!-- Factories -->
+                        <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
+                            <div class="text-[10px] text-indigo-400 font-bold uppercase mb-1">Fabrikker 🏭</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-factories">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-indigo-900"><div id="bar-factories" class="h-full bg-indigo-500" style="width: 0%"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Market Info -->
+                    <div class="flex justify-between items-center bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-700 text-xs font-mono">
+                         <div class="flex items-center gap-2">
+                             <span>💵 Kasse:</span>
+                             <span id="sim-money" class="text-yellow-400 font-bold text-sm">0</span>
+                             <span class="text-green-500 text-[10px] ml-1" id="sim-income">(+0/t)</span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                             <span>🍞 Pris:</span>
+                             <span id="sim-price" class="text-gray-300 font-bold">10 kr</span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                             <span title="Inflasjon gjør pengene mindre verdt">🔥 Inflasjon:</span>
+                             <span id="sim-inflation" class="text-red-400 font-bold">0%</span>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: CONTROLS (5 cols) -->
+                <div class="lg:col-span-5 space-y-4">
+                    
+                    <!-- Action Cards -->
+                    <div class="bg-slate-800 p-4 rounded-xl border border-gray-700 shadow-xl">
+                        <h4 class="font-bold text-gray-400 mb-4 border-b border-gray-600 pb-2 uppercase text-[10px] tracking-widest">Dine Valg (Strategi)</h4>
+                        
+                        <!-- BUILD FARM -->
+                        <button onclick="simAction('farm', event)" id="btn-farm" class="w-full mb-3 bg-amber-900/40 hover:bg-amber-900/60 border border-amber-800/50 hover:border-amber-500 rounded-lg p-3 text-left transition-all group relative overflow-hidden">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-amber-200">🌾 Bygg Gård</span>
+                                <span class="bg-amber-950 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-900">Kost: 15 kr</span>
+                            </div>
+                            <div class="text-[11px] text-amber-300/80 mb-2">Viktig for overlevelse (Fase 1).</div>
+                            <div class="flex gap-2 text-[10px] font-mono border-t border-amber-900/50 pt-2">
+                                <span class="text-green-400">▲ Mat</span>
+                                <span class="text-gray-500">|</span>
+                                <span class="text-yellow-400">▲ +1 Inntekt</span>
+                            </div>
+                        </button>
+
+                         <!-- BUILD FACTORY (LOCKED INITIALLY) -->
+                        <button onclick="simAction('factory', event)" id="btn-factory" class="w-full mb-3 bg-indigo-900/40 hover:bg-indigo-900/60 border border-indigo-800/50 hover:border-indigo-500 rounded-lg p-3 text-left transition-all group relative overflow-hidden btn-disabled">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-indigo-200">🏭 Bygg Fabrikk</span>
+                                <span class="bg-indigo-950 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-900">Kost: 50 kr</span>
+                            </div>
+                            <div class="text-[11px] text-indigo-300/80 mb-2">Skaper rikdom. Krever Fase 2.</div>
+                            <div class="flex gap-2 text-[10px] font-mono border-t border-indigo-900/50 pt-2">
+                                <span class="text-green-400">▲▲ Score</span>
+                                <span class="text-gray-500">|</span>
+                                <span class="text-yellow-400">▲ +5 Inntekt</span>
+                            </div>
+                            <!-- Lock Overlay -->
+                            <div id="lock-factory" class="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">🔒 Låst (Nå Fase 2)</span>
+                            </div>
+                        </button>
+                        
+                        <!-- PRINT MONEY -->
+                        <button onclick="simAction('print', event)" id="btn-print" class="w-full mb-3 bg-green-900/40 hover:bg-green-900/60 border border-green-800/50 hover:border-green-500 rounded-lg p-3 text-left transition-all group">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-green-200">🖨️ Trykk Penger</span>
+                                <span class="bg-green-950 text-green-300 text-[10px] font-bold px-2 py-0.5 rounded border border-green-900">Kost: 0 kr</span>
+                            </div>
+                            <div class="text-[11px] text-green-300/80 mb-2">Raske penger, men farlig.</div>
+                            <div class="flex gap-2 text-[10px] font-mono border-t border-green-900/50 pt-2">
+                                <span class="text-green-400">▲ +50 Penger</span>
+                                <span class="text-gray-500">|</span>
+                                <span class="text-red-400">▲ Inflasjon</span>
+                            </div>
+                        </button>
+
+                    </div>
+
+                    <!-- Log -->
+                    <div id="sim-log" class="sim-log border border-slate-700/50">
+                        <div class="text-gray-400 italic">> Klar for simulering.</div>
+                    </div>
+                </div>
+            </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+             // Helper
+            window.spawnFloatText = function(x, y, text, colorClass) {
+                const el = document.createElement('div');
+                el.className = `floating-text ${colorClass}`;
+                el.innerText = text;
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 1000);
+            }
+
+            /* --- SIMULATOR LOGIC --- */
+            let simState = { 
+                pop: 15, food: 80, money: 75, printedMoney: 0, price: 10, inflation: 0, 
+                farms: 4, factories: 0,
+                running: false, paused: false, timer: null, phase: 0,
+                hasWon: false
+            };
+
+            window.checkSimPassword = function() {
+                const input = document.getElementById('sim-pass-input');
+                const errorMsg = document.getElementById('pass-error');
+                const overlay = document.getElementById('sim-password-overlay');
+                
+                if(input.value.toLowerCase().trim() === 'økonomi') {
+                    overlay.classList.add('hidden');
+                } else {
+                    errorMsg.classList.remove('hidden');
+                    input.classList.add('border-red-500');
+                    input.parentElement.classList.add('shake-anim');
+                    setTimeout(() => input.parentElement.classList.remove('shake-anim'), 300);
+                }
+            }
+            
+            window.startSim = function() {
+                if(simState.running && !simState.paused) return;
+                
+                document.getElementById('sim-start-overlay').classList.add('hidden');
+                
+                if(simState.paused) {
+                     simState.paused = false;
+                     document.getElementById('sim-pause-btn').innerText = "⏸️ Pause";
+                     logSim("Simulering gjenopptatt.", "text-white");
+                } else {
+                    simState.running = true;
+                    logSim("Simulering startet.", "text-white");
+                    document.getElementById('sim-pause-btn').classList.remove('hidden');
+                    document.getElementById('sim-modal').classList.add('hidden');
+                }
+                
+                simState.timer = setInterval(simTick, 2000);
+                updateButtons();
+            }
+
+            window.togglePause = function() {
+                if(!simState.running) return;
+                if(simState.paused) {
+                    simState.paused = false;
+                    document.getElementById('sim-pause-btn').innerText = "⏸️ Pause";
+                    document.getElementById('sim-pause-btn').classList.remove('bg-green-600', 'hover:bg-green-500');
+                    document.getElementById('sim-pause-btn').classList.add('bg-yellow-600', 'hover:bg-yellow-500');
+                    simState.timer = setInterval(simTick, 2000);
+                    logSim("Spill gjenopptatt.", "text-gray-400");
+                } else {
+                    simState.paused = true;
+                    clearInterval(simState.timer);
+                    document.getElementById('sim-pause-btn').innerText = "▶️ Fortsett";
+                    document.getElementById('sim-pause-btn').classList.remove('bg-yellow-600', 'hover:bg-yellow-500');
+                    document.getElementById('sim-pause-btn').classList.add('bg-green-600', 'hover:bg-green-500');
+                    logSim("Spill pauset.", "text-yellow-400");
+                }
+            }
+            
+            window.resetSim = function() {
+                clearInterval(simState.timer);
+                simState = { pop: 15, food: 80, money: 75, printedMoney: 0, price: 10, inflation: 0, farms: 4, factories: 0, running: false, paused: false, timer: null, phase: 0, hasWon: false };
+                
+                document.getElementById('sim-start-overlay').classList.remove('hidden');
+                
+                updateSimUI();
+                logSim("Reset utført.", "text-gray-400");
+                document.getElementById('sim-pause-btn').classList.add('hidden');
+                document.getElementById('sim-modal').classList.add('hidden');
+                document.getElementById('sim-city-view').innerHTML = '';
+                document.getElementById('sim-progress').style.width = '0%';
+                updateButtons();
+            }
+
+            window.continueGame = function() {
+                document.getElementById('sim-modal').classList.add('hidden');
+                document.getElementById('sim-modal').classList.remove('flex');
+                simState.hasWon = true;
+                simState.running = true;
+                simState.timer = setInterval(simTick, 2000);
+                document.getElementById('sim-pause-btn').classList.remove('hidden');
+                logSim("Fortsetter å bygge imperiet...", "text-yellow-400");
+            }
+            
+            function showSimModal(title, desc, icon, colorClass, type) {
+                clearInterval(simState.timer);
+                simState.running = false;
+                const modal = document.getElementById('sim-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.getElementById('sim-modal-title').innerText = title;
+                document.getElementById('sim-modal-title').className = `text-3xl font-black mb-2 uppercase ${colorClass}`;
+                document.getElementById('sim-modal-desc').innerText = desc;
+                document.getElementById('sim-modal-icon').innerText = icon;
+                document.getElementById('sim-pause-btn').classList.add('hidden');
+
+                const btnContinue = document.getElementById('btn-continue');
+                if(type === 'win') {
+                    btnContinue.classList.remove('hidden');
+                } else {
+                    btnContinue.classList.add('hidden');
+                }
+            }
+
+            function simTick() {
+                // 1. Production
+                let foodProd = simState.farms * 6; 
+                simState.food += foodProd;
+                
+                let passiveIncome = (simState.farms * 1) + (simState.factories * 5);
+                simState.money += passiveIncome;
+
+                // 2. Consumption
+                const consumption = Math.ceil(simState.pop * 1.5);
+                simState.food -= consumption;
+                
+                // 3. Growth / Starvation
+                if(simState.food < 0) {
+                    simState.food = 0;
+                    simState.pop = Math.floor(simState.pop * 0.9);
+                    logSim("KRISE! Folk sulter.", "text-red-400");
+                    if(simState.pop <= 5) {
+                        showSimModal("Sultkatastrofe", "Du bygde ikke nok gårder. Folket sultet ihjel.", "☠️", "text-red-500", "loss");
+                        return;
+                    }
+                } else if(simState.food > simState.pop * 6) {
+                    simState.pop += 1;
+                }
+
+                // 4. Economy & Inflation (Productivity Based)
+                const productivity = Math.max(1, simState.farms + (simState.factories * 3));
+                const inflationPush = (simState.printedMoney / productivity) * 0.5;
+                const deflationPull = productivity * 0.05;
+                
+                let targetPrice = 10 + inflationPush - deflationPull;
+                targetPrice = Math.max(5, targetPrice); // Price floor
+                
+                if(simState.price < targetPrice) simState.price += 0.5;
+                if(simState.price > targetPrice) simState.price -= 0.5;
+
+                const basePrice = 10; 
+                simState.inflation = Math.floor(((simState.price - basePrice) / basePrice) * 100);
+
+                if(simState.inflation > 200) {
+                     showSimModal("Hyperinflasjon", "Pengene dine er verdiløse. Samfunnet kollapset.", "💸", "text-red-500", "loss");
+                     return;
+                }
+
+                // 5. Score
+                let score = (simState.pop * 5) + (simState.factories * 150) + (simState.farms * 20);
+                if(simState.inflation > 20) score = score / (simState.inflation / 20);
+                
+                let nextGoal = 500;
+                let prevPhase = simState.phase;
+
+                // Adjusted Thresholds
+                if(score < 300) { 
+                    simState.phase = 1; 
+                    document.getElementById('sim-phase-text').innerText = "Fase 1: Jordbrukssamfunn"; 
+                    nextGoal = 300;
+                }
+                else if(score < 1500) { 
+                    simState.phase = 2; 
+                    document.getElementById('sim-phase-text').innerText = "Fase 2: Industriell Vekst"; 
+                    nextGoal = 1500;
+                }
+                else if(score < 3000) { 
+                    simState.phase = 3; 
+                    document.getElementById('sim-phase-text').innerText = "Fase 3: Modning"; 
+                    nextGoal = 3000;
+                }
+                else if(score < 5000) { 
+                    simState.phase = 4; 
+                    document.getElementById('sim-phase-text').innerText = "Fase 4: Moderne"; 
+                    nextGoal = 5000;
+                }
+                else { 
+                    simState.phase = 5; 
+                    document.getElementById('sim-phase-text').innerText = "Fase 5: Fremtid"; 
+                }
+
+                if(simState.phase > prevPhase) {
+                    logSim(`NY FASE: ${simState.phase}!`, "text-cyan-400 font-bold");
+                    updateButtons();
+                    document.getElementById('sim-progress').classList.add('brightness-150');
+                    setTimeout(() => document.getElementById('sim-progress').classList.remove('brightness-150'), 500);
+                }
+
+                if(score >= 5000 && !simState.hasWon) {
+                     showSimModal("Sivilisasjon Oppnådd!", "Kapitalisme og sparing skapte velstand!", "🏆", "text-yellow-400", "win");
+                     return;
+                }
+
+                let progressPct = Math.min(100, (score / nextGoal) * 100); 
+                document.getElementById('sim-progress').style.width = progressPct + '%';
+                document.getElementById('sim-score-display').innerText = Math.floor(score);
+                document.getElementById('sim-next-goal').innerText = nextGoal;
+                document.getElementById('sim-income').innerText = `(+${passiveIncome}/t)`;
+
+                updateSimUI();
+            }
+
+            window.simAction = function(type, e) {
+                if(!simState.running) return;
+                
+                if(type === 'farm') {
+                    if(simState.money >= 15) {
+                        simState.money -= 15;
+                        simState.farms += 1;
+                        logSim("Ny Gård bygget! Mer mat.", "text-amber-300");
+                        if(e) spawnFloatText(e.clientX, e.clientY, "+Mat", "text-amber-400");
+                    } else logSim("Mangler penger (15 kr).", "text-gray-500");
+                }
+                else if(type === 'factory') {
+                    if(simState.phase < 2) {
+                        logSim("Låst! Må nå Fase 2.", "text-red-500");
+                        return;
+                    }
+                    if(simState.money >= 50) {
+                        simState.money -= 50;
+                        simState.factories += 1;
+                        logSim("Ny Fabrikk! Stor inntekt.", "text-indigo-300");
+                        if(e) spawnFloatText(e.clientX, e.clientY, "+Rikdom", "text-indigo-400");
+                    } else logSim("Mangler penger (50 kr).", "text-gray-500");
+                } 
+                else if(type === 'print') {
+                    simState.money += 50;
+                    simState.printedMoney += 50; 
+                    logSim("Sentralbanken: Penger trykket.", "text-green-300");
+                    if(e) spawnFloatText(e.clientX, e.clientY, "+$$$", "text-green-400");
+                } 
+                updateSimUI();
+            }
+            
+            function updateButtons() {
+                const btnFarm = document.getElementById('btn-farm');
+                const btnFactory = document.getElementById('btn-factory');
+                const lockOverlay = document.getElementById('lock-factory');
+                
+                if(simState.money < 15) btnFarm.classList.add('btn-disabled'); else btnFarm.classList.remove('btn-disabled');
+
+                if(simState.phase < 2) {
+                    btnFactory.classList.add('btn-disabled');
+                    lockOverlay.classList.remove('hidden');
+                } else {
+                    lockOverlay.classList.add('hidden');
+                    if(simState.money < 50) btnFactory.classList.add('btn-disabled'); else btnFactory.classList.remove('btn-disabled');
+                }
+            }
+
+            function updateSimUI() {
+                // UI Updates
+                document.getElementById('sim-pop').innerText = simState.pop;
+                document.getElementById('sim-food').innerText = Math.floor(simState.food);
+                document.getElementById('sim-farms').innerText = simState.farms;
+                document.getElementById('sim-factories').innerText = simState.factories;
+                document.getElementById('sim-money').innerText = Math.floor(simState.money);
+                document.getElementById('sim-price').innerText = Math.floor(simState.price) + " kr";
+                document.getElementById('sim-inflation').innerText = simState.inflation + "%";
+
+                document.getElementById('bar-pop').style.width = Math.min(100, (simState.pop / 200)*100) + '%';
+                document.getElementById('bar-food').style.width = Math.min(100, (simState.food / 500)*100) + '%';
+                document.getElementById('bar-farms').style.width = Math.min(100, (simState.farms / 30)*100) + '%';
+                document.getElementById('bar-factories').style.width = Math.min(100, (simState.factories / 20)*100) + '%';
+                
+                updateButtons();
+
+                const cityGrid = document.getElementById('sim-city-view');
+                const container = document.getElementById('sim-city-container');
+                
+                if(simState.phase === 1) container.className = "bg-amber-900/40 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 2) container.className = "bg-stone-700 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 3) container.className = "bg-slate-700 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 4) container.className = "bg-indigo-900/60 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 5) container.className = "bg-fuchsia-900/60 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+
+                const totalBuildings = simState.farms + simState.factories + Math.ceil(simState.pop/2);
+                if(cityGrid.childElementCount !== totalBuildings) {
+                    cityGrid.innerHTML = '';
+                    for(let i=0; i<simState.farms; i++) {
+                        const s = document.createElement('div'); s.className = 'sim-item'; s.innerText = '🌾'; cityGrid.appendChild(s);
+                    }
+                    for(let i=0; i<simState.factories; i++) {
+                        const s = document.createElement('div'); s.className = 'sim-item'; s.innerText = '🏭'; cityGrid.appendChild(s);
+                    }
+                    for(let i=0; i<Math.ceil(simState.pop/2); i++) {
+                        const s = document.createElement('div'); s.className = 'sim-item'; 
+                        s.innerText = simState.phase < 2 ? '⛺' : (simState.phase < 4 ? '🏠' : '🏢'); 
+                        cityGrid.appendChild(s);
+                    }
+                }
+            }
+            
+            function logSim(msg, colorClass="text-gray-300") {
+                const log = document.getElementById('sim-log');
+                const line = document.createElement('div');
+                line.className = `mb-1 ${colorClass}`;
+                line.innerText = "> " + msg;
+                log.prepend(line);
+                if(log.children.length > 10) log.lastChild.remove();
+            }
+
+            updateSimUI();
+        });
+    </script>
+</body>
+</html>
