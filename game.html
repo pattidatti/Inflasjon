@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Samfunnssimulatoren 2.0</title>
+    <title>Samfunnssimulatoren 3.2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -11,31 +11,79 @@
             background-color: #0f172a;
             color: white;
             user-select: none;
-            overflow: hidden; /* Critical: Prevent full page scroll */
-            height: 100vh;    /* Force full height */
+            overflow: hidden;
+            height: 100vh;
             width: 100vw;
         }
 
-        /* --- Simulator Specifics --- */
-        .sim-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
-            gap: 8px;
-            padding: 10px;
-            overflow-y: auto;
+        /* --- 3D CITY ENGINE --- */
+        .city-viewport {
+            perspective: 1000px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             height: 100%;
-            align-content: start;
+            width: 100%;
         }
-        
-        .sim-item {
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 1.5rem;
-            height: 45px;
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+
+        .city-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 6px; 
+            width: 95%;
+            max-width: 600px;
+            transform: rotateX(45deg) translateY(-20px);
+            transform-style: preserve-3d;
+            padding-bottom: 40px;
+        }
+
+        .iso-tile {
+            aspect-ratio: 1;
+            position: relative;
+            border-radius: 6px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+            cursor: default;
+        }
+
+        .iso-tile::after {
+            content: '';
+            position: absolute;
+            top: 100%; left: 0; width: 100%; height: 6px;
+            border-radius: 0 0 6px 6px;
+            opacity: 0.6; filter: brightness(0.7);
+        }
+
+        /* Building Types */
+        .tile-empty {
+            background: linear-gradient(to bottom right, #334155, #1e293b);
+            box-shadow: 0 4px 0 #0f172a;
+            opacity: 0.6; transform: translateZ(0);
+        }
+        .tile-farm {
+            background: linear-gradient(to bottom right, #f59e0b, #d97706);
+            box-shadow: 0 8px 15px rgba(245, 158, 11, 0.3), 0 6px 0 #92400e;
+            transform: translateZ(8px);
+        }
+        .tile-factory {
+            background: linear-gradient(to bottom right, #3b82f6, #2563eb);
+            box-shadow: 0 8px 15px rgba(59, 130, 246, 0.3), 0 6px 0 #1e40af;
+            transform: translateZ(12px);
+        }
+        .tile-house {
+            background: linear-gradient(to bottom right, #10b981, #059669);
+            box-shadow: 0 8px 15px rgba(16, 185, 129, 0.2), 0 6px 0 #065f46;
+            transform: translateZ(4px);
+        }
+
+        .tile-content {
+            font-size: 1.6rem;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -65%);
+            text-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
         
         /* Floating Text */
@@ -47,257 +95,260 @@
             position: absolute; pointer-events: none;
             font-weight: 900; font-size: 1.2rem;
             animation: floatUpFade 0.8s ease-out forwards;
-            z-index: 100; 
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            z-index: 100; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
         }
 
-        /* Button Press Effect */
         .btn-press:active { transform: scale(0.95); }
         .btn-disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
 
         /* Sliders */
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
-            background: white; cursor: pointer; margin-top: -7px; 
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: white; cursor: pointer; margin-top: -6px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 2px;
         }
+        
+        /* Unrest Bar Animation */
+        @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } }
+        .critical-unrest { animation: pulse-red 1s infinite; }
+        
+        /* Welfare Button Pulse when needed */
+        @keyframes pulse-pink { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); } 100% { transform: scale(1); } }
+        .welfare-needed { animation: pulse-pink 1.5s infinite; border-color: #f472b6 !important; background-color: rgba(236, 72, 153, 0.2) !important; }
 
-        /* Glassmorphism for Panels */
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Modal Animation */
         .modal-enter { animation: slideUp 0.3s ease-out forwards; }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         .shake-anim { animation: shake 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-[url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')] bg-cover bg-center">
     
-    <!-- Dark Overlay for background readability -->
-    <div class="absolute inset-0 bg-slate-900/90 z-0"></div>
+    <div class="absolute inset-0 bg-slate-950/80 z-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950/80 to-slate-950/95"></div>
 
-    <!-- MAIN UI WRAPPER: Flex column ensures it fills height but never overflows -->
-    <div class="relative z-10 flex flex-col h-full w-full max-w-7xl mx-auto p-2 md:p-4 gap-2 md:gap-4">
+    <div class="relative z-10 flex flex-col h-full w-full max-w-5xl mx-auto p-2 gap-2">
 
-        <!-- TOP BAR: STATS (Fixed Height-ish, Flex-none) -->
-        <header class="flex-none glass-panel rounded-2xl p-3 md:p-4 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-4 shadow-xl">
-            <div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-                <div class="flex items-center gap-4">
-                    <a href="index.html" class="bg-slate-700 hover:bg-slate-600 rounded-full w-8 h-8 flex items-center justify-center text-sm transition-colors">←</a>
-                    <div>
-                        <h1 class="font-black text-lg md:text-xl text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-300">SAMFUNNSSIMULATOR</h1>
-                        <div id="sim-phase-text" class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Fase 1: Jordbrukssamfunn</div>
+        <!-- HEADER -->
+        <header class="flex-none glass-panel rounded-xl p-2 flex justify-between items-center gap-2 shadow-xl z-20">
+            <div class="flex items-center gap-2">
+                <a href="index.html" class="bg-slate-700/50 hover:bg-slate-600 rounded-full w-8 h-8 flex items-center justify-center text-sm transition-colors text-gray-300">←</a>
+                <div class="hidden md:block">
+                    <h1 class="font-black text-xs md:text-sm text-white tracking-tight leading-tight">SAMFUNNSSIM</h1>
+                    <div id="sim-phase-text" class="text-[9px] font-bold uppercase tracking-widest text-emerald-400 leading-none">Fase 1</div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="flex gap-3 md:gap-6 text-center items-center">
+                <!-- Unrest Meter -->
+                <div class="flex flex-col w-20 md:w-32" title="Høy uro fører til revolusjon (Game Over)">
+                    <div class="flex justify-between text-[9px] uppercase font-bold text-gray-400 mb-0.5">
+                        <span>Misnøye</span>
+                        <span id="sim-unrest-val" class="text-white">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-white/10">
+                        <div id="sim-unrest-bar" class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-600 w-0 transition-all duration-500"></div>
                     </div>
                 </div>
-                 <!-- Mobile Pause Button visible only on small screens -->
-                 <button onclick="togglePause()" class="md:hidden bg-slate-700 text-white text-xs px-3 py-2 rounded-lg btn-press">⏸️</button>
-            </div>
 
-            <!-- Stats Grid -->
-            <div class="flex gap-3 md:gap-6 text-center w-full md:w-auto justify-around md:justify-center bg-black/20 md:bg-transparent p-2 md:p-0 rounded-lg">
-                <div class="relative group">
-                    <div class="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider">Befolkning</div>
-                    <div class="text-lg md:text-xl font-bold" id="sim-pop">10</div>
-                    <div class="text-[9px] text-gray-400 absolute -bottom-3 w-full hidden md:block" id="sim-unemployed">0 ledige</div>
+                <div>
+                    <div class="text-[8px] md:text-[9px] text-gray-400 uppercase font-bold">Pop</div>
+                    <div class="text-sm md:text-xl font-black text-white" id="sim-pop">10</div>
                 </div>
                 <div>
-                    <div class="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider">Mat</div>
-                    <div class="text-lg md:text-xl font-bold text-emerald-400" id="sim-food">50</div>
-                    <div class="text-[9px] hidden md:block" id="sim-food-change">(+0)</div>
+                    <div class="text-[8px] md:text-[9px] text-gray-400 uppercase font-bold">Mat</div>
+                    <div class="text-sm md:text-xl font-black text-emerald-400" id="sim-food">50</div>
                 </div>
                 <div>
-                    <div class="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider">Penger</div>
-                    <div class="text-lg md:text-xl font-bold text-yellow-400" id="sim-money">50 kr</div>
-                    <div class="text-[9px] hidden md:block" id="sim-money-change">(+0)</div>
+                    <div class="text-[8px] md:text-[9px] text-gray-400 uppercase font-bold">Penger</div>
+                    <div class="text-sm md:text-xl font-black text-yellow-400" id="sim-money">50 kr</div>
+                </div>
+                <!-- Added Score back to fix the error -->
+                <div class="hidden sm:block">
+                    <div class="text-[8px] md:text-[9px] text-gray-400 uppercase font-bold">Score</div>
+                    <div class="text-base md:text-xl font-black text-indigo-400" id="sim-score">0</div>
                 </div>
                 <div class="hidden sm:block">
-                    <div class="text-[10px] text-gray-400 uppercase tracking-wider">Inflasjon</div>
-                    <div class="text-xl font-bold text-red-400" id="sim-inflation">0%</div>
-                </div>
-                 <div>
-                    <div class="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider">Score</div>
-                    <div class="text-lg md:text-xl font-bold text-indigo-400" id="sim-score">0</div>
+                    <div class="text-[8px] md:text-[9px] text-gray-400 uppercase font-bold">Inflasjon</div>
+                    <div class="text-base md:text-xl font-black text-red-400" id="sim-inflation">0%</div>
                 </div>
             </div>
 
-            <!-- Global Actions (Desktop) -->
-             <div class="hidden md:flex gap-2">
-                 <button onclick="printMoney(event)" class="bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-200 text-xs px-3 py-2 rounded-lg btn-press transition-colors" title="Trykk penger (Øker inflasjon)">
-                    🖨️ +50 kr
+            <!-- Global Actions -->
+             <div class="flex gap-1">
+                 <button onclick="provideWelfare(event)" id="btn-welfare" class="bg-pink-500/10 hover:bg-pink-500/30 border border-pink-500/30 text-pink-200 text-[10px] px-3 py-1.5 rounded btn-press font-bold transition-all" title="Kjøp 'Brød og Sirkus' for å dempe uro kraftig">
+                    🎪 Brød & Sirkus (-<span id="welfare-cost">25</span>)
                  </button>
-                 <button onclick="togglePause()" id="btn-pause" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-2 rounded-lg btn-press">
+                 <button onclick="togglePause()" id="btn-pause" class="bg-slate-700/50 hover:bg-slate-600/50 text-white text-xs px-2 py-1.5 rounded btn-press border border-white/10">
                     ⏸️
                  </button>
              </div>
         </header>
 
-        <!-- MIDDLE: THE VISUAL CITY (Flex-1 + min-h-0 is crucial for scroll within flex) -->
-        <section class="flex-1 min-h-0 glass-panel rounded-2xl relative overflow-hidden shadow-2xl flex flex-col">
-            <div class="absolute top-0 left-0 bg-black/20 text-xs px-3 py-1 rounded-br-lg text-gray-400 border-b border-r border-white/5 z-10">Din Sivilisasjon</div>
+        <!-- CITY VIEWPORT -->
+        <section class="flex-1 min-h-0 relative z-0 glass-panel rounded-xl overflow-hidden">
+            <div class="city-viewport">
+                <div id="sim-city-grid" class="city-grid"></div>
+            </div>
             
-            <!-- This container handles the internal scroll -->
-            <div id="sim-city-view" class="sim-grid pt-10 pb-4"></div>
-            
+            <!-- ALERTS LAYER -->
+            <div id="alert-container" class="absolute top-4 left-0 right-0 flex flex-col items-center pointer-events-none z-40 gap-2"></div>
+
             <!-- START OVERLAY -->
-            <div id="start-overlay" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center z-50 p-4">
-                <div class="text-6xl mb-4 animate-bounce">🌍</div>
-                <h2 class="text-3xl font-bold mb-2 text-white text-center">Velkommen Høvding</h2>
-                <p class="text-sm text-gray-400 mb-6 text-center max-w-md leading-relaxed">
-                    Du starter i fattigdom. Målet er rikdom.<br>
-                    Balanser <strong>mat</strong> (bønder) og <strong>penger</strong> (arbeidere).<br>
-                    Pass deg for <strong>inflasjon</strong>.
+            <div id="start-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center z-50 p-4">
+                <div class="text-5xl mb-4 animate-bounce">🌍</div>
+                <h2 class="text-2xl font-black mb-1 text-white">Høvdingen Kaller</h2>
+                <p class="text-xs text-gray-400 mb-6 text-center max-w-xs leading-relaxed">
+                    Balanser mat, økonomi og folkets misnøye.<br>
+                    Du må lede samfunnet fra jordbruk til moderne tid.
                 </p>
-                <div class="flex flex-col sm:flex-row gap-2 bg-slate-800 p-2 rounded-xl border border-slate-700">
-                        <input type="password" id="pass-input" placeholder="Passord..." class="bg-slate-700 border-none px-4 py-2 rounded-lg text-sm text-center focus:ring-2 focus:ring-indigo-500 outline-none text-white w-full sm:w-32">
-                        <button onclick="attemptStart()" class="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white px-6 py-2 rounded-lg font-bold text-sm btn-press shadow-lg whitespace-nowrap">Start Spillet</button>
+                <div class="flex flex-col gap-2 w-full max-w-xs">
+                        <input type="password" id="pass-input" placeholder="Passord: økonomi" class="bg-slate-800 border border-white/10 px-4 py-2 rounded-lg text-sm text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white w-full">
+                        <button onclick="attemptStart()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-sm btn-press shadow-lg w-full">START</button>
                 </div>
-                <p id="pass-msg" class="text-red-500 text-xs mt-3 font-bold opacity-0 transition-opacity">Feil passord</p>
+                <p id="pass-msg" class="text-red-400 text-xs mt-2 opacity-0 transition-opacity font-bold">Feil passord</p>
             </div>
         </section>
 
-        <!-- BOTTOM: COMMAND CENTER (Controls) (Flex-none ensures it stays visible) -->
-        <footer class="flex-none grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 h-auto md:h-32">
+        <!-- FOOTER: COMMAND CENTER -->
+        <footer class="flex-none grid grid-cols-12 gap-2 h-auto md:h-32 z-20">
             
-            <!-- 1. Allocation (Sliders) - Span 6 -->
-            <div class="glass-panel rounded-2xl p-3 md:p-4 md:col-span-6 flex flex-col justify-center">
-                <div class="flex justify-between items-center mb-2">
-                    <div class="text-xs font-bold text-gray-400 uppercase tracking-widest">Arbeidsfordeling</div>
-                    <div class="text-[10px] text-gray-500 bg-black/20 px-2 py-0.5 rounded">Ledige: <span id="cc-unemployed" class="text-white">0</span></div>
-                </div>
+            <!-- 1. Policy & Allocation (Combined) -->
+            <div class="col-span-12 md:col-span-5 glass-panel rounded-xl p-2 md:p-3 flex flex-col justify-center shadow-lg gap-2">
                 
-                <!-- Farmers Slider -->
-                <div class="mb-2 md:mb-3">
-                    <div class="flex justify-between text-xs mb-1">
-                        <span class="text-emerald-300 font-bold flex items-center gap-1">🌾 Bønder</span>
-                        <span class="text-gray-400"><span id="cc-farmers">0</span> / <span id="cc-max-farmers">4</span></span>
+                <div class="flex gap-4 h-full">
+                    <!-- Tax Column -->
+                    <div class="w-1/4 flex flex-col justify-center border-r border-white/5 pr-2">
+                        <div class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 text-center">Skatt</div>
+                        <div class="h-full flex flex-col justify-center items-center relative">
+                            <input type="range" id="slider-tax" class="h-full w-4 accent-yellow-500 appearance-none bg-slate-700/50 rounded-full" style="-webkit-appearance: slider-vertical;" min="0" max="50" value="10" oninput="updateTax()">
+                        </div>
+                        <div class="text-[9px] font-bold text-yellow-400 text-center mt-1"><span id="tax-display">10</span>%</div>
                     </div>
-                    <input type="range" id="slider-farmers" class="w-full accent-emerald-500 touch-pan-x" min="0" max="10" value="0" oninput="updateAllocation()">
-                </div>
 
-                <!-- Workers Slider -->
-                <div>
-                    <div class="flex justify-between text-xs mb-1">
-                        <span class="text-blue-300 font-bold flex items-center gap-1">🏭 Arbeidere</span>
-                        <span class="text-gray-400"><span id="cc-workers">0</span> / <span id="cc-max-workers">0</span></span>
+                    <!-- Allocation Column -->
+                    <div class="w-3/4 flex flex-col justify-center gap-2">
+                        <div class="flex justify-between items-center">
+                            <div class="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                Arbeid
+                            </div>
+                            <div class="text-[9px] font-bold text-white bg-white/10 px-2 py-0.5 rounded-full">Ledige: <span id="cc-unemployed" class="text-yellow-400">0</span></div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-0.5 font-bold">
+                                <span class="text-emerald-300">🌾 Bønder</span>
+                                <span class="text-gray-400"><span id="cc-farmers">0</span> / <span id="cc-max-farmers">4</span></span>
+                            </div>
+                            <input type="range" id="slider-farmers" class="w-full accent-emerald-500 block h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer" min="0" max="10" value="0" oninput="updateAllocation()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-[10px] mb-0.5 font-bold">
+                                <span class="text-blue-300">🏭 Arbeidere</span>
+                                <span class="text-gray-400"><span id="cc-workers">0</span> / <span id="cc-max-workers">0</span></span>
+                            </div>
+                            <input type="range" id="slider-workers" class="w-full accent-blue-500 block h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer" min="0" max="10" value="0" oninput="updateAllocation()">
+                        </div>
                     </div>
-                    <input type="range" id="slider-workers" class="w-full accent-blue-500 touch-pan-x" min="0" max="10" value="0" oninput="updateAllocation()">
                 </div>
             </div>
 
-            <!-- 2. Buildings (Big Buttons) - Span 4 -->
-            <div class="md:col-span-4 grid grid-cols-2 gap-2 md:gap-3 h-24 md:h-full">
-                <button onclick="build('farm', event)" id="btn-farm" class="btn-press glass-panel rounded-xl hover:bg-emerald-900/30 border-emerald-500/30 flex flex-col items-center justify-center gap-1 transition-all group">
+            <!-- 2. Construction -->
+            <div class="col-span-8 md:col-span-4 grid grid-cols-2 gap-2">
+                <button onclick="build('farm', event)" id="btn-farm" class="btn-press glass-panel rounded-xl hover:bg-emerald-600/20 border-emerald-500/20 flex flex-col items-center justify-center p-1 transition-all group">
                     <div class="text-xl md:text-2xl group-hover:scale-110 transition-transform">🌾</div>
-                    <div class="font-bold text-emerald-200 text-xs md:text-sm">Bygg Gård</div>
-                    <div class="text-[10px] md:text-xs text-yellow-400 bg-black/30 px-2 rounded">15 kr</div>
+                    <div class="font-bold text-emerald-100 text-[10px] md:text-xs mt-1">NY GÅRD</div>
+                    <div class="text-[9px] text-emerald-400 font-mono">15 kr</div>
                 </button>
 
-                <button onclick="build('factory', event)" id="btn-factory" class="btn-press glass-panel rounded-xl hover:bg-blue-900/30 border-blue-500/30 flex flex-col items-center justify-center gap-1 transition-all group btn-disabled opacity-50 relative overflow-hidden">
-                    <div class="text-xl md:text-2xl group-hover:scale-110 transition-transform">🏭</div>
-                    <div class="font-bold text-blue-200 text-xs md:text-sm">Bygg Fabrikk</div>
-                    <div class="text-[10px] md:text-xs text-yellow-400 bg-black/30 px-2 rounded">50 kr</div>
-                    <div id="lock-icon" class="absolute inset-0 bg-slate-900/80 flex items-center justify-center">🔒</div>
+                <button onclick="build('factory', event)" id="btn-factory" class="btn-press glass-panel rounded-xl hover:bg-blue-600/20 border-blue-500/20 flex flex-col items-center justify-center p-1 transition-all group btn-disabled opacity-40 relative overflow-hidden">
+                    <div class="text-xl md:text-2xl group-hover:scale-110 transition-transform grayscale group-hover:grayscale-0">🏭</div>
+                    <div class="font-bold text-blue-100 text-[10px] md:text-xs mt-1">NY FABRIKK</div>
+                    <div class="text-[9px] text-blue-400 font-mono">50 kr</div>
+                    <div id="lock-icon" class="absolute inset-0 bg-slate-950/60 flex items-center justify-center backdrop-blur-[1px] z-20 rounded-xl">🔒</div>
                 </button>
             </div>
 
-            <!-- 3. Tech Button - Span 2 -->
-            <div class="md:col-span-2 h-24 md:h-full">
-                <button onclick="toggleTechModal()" class="btn-press w-full h-full glass-panel rounded-xl bg-gradient-to-br from-purple-900/40 to-indigo-900/40 hover:from-purple-800/50 hover:to-indigo-800/50 border-purple-500/30 flex flex-col items-center justify-center gap-2 transition-all group">
-                    <div class="text-2xl md:text-3xl group-hover:rotate-12 transition-transform">🧪</div>
-                    <div class="font-bold text-purple-200 text-xs md:text-sm uppercase tracking-wide">Forskning</div>
+            <!-- 3. Tech & Finance -->
+            <div class="col-span-4 md:col-span-3 grid grid-rows-2 gap-2">
+                 <button onclick="printMoney(event)" class="btn-press w-full h-full glass-panel rounded-xl bg-red-900/20 hover:bg-red-800/30 border-red-500/30 flex items-center justify-center gap-2 transition-all group">
+                    <div class="text-xl group-hover:scale-110 transition-transform">🖨️</div>
+                    <div class="text-left">
+                        <div class="font-bold text-red-200 text-[10px] uppercase">TRYKK PENGER</div>
+                        <div class="text-[9px] text-red-400">+100kr (⚠️ Inflasjon)</div>
+                    </div>
+                </button>
+
+                <button onclick="toggleTechModal()" class="btn-press w-full h-full glass-panel rounded-xl bg-gradient-to-br from-indigo-900/40 to-purple-900/40 hover:from-indigo-800/60 hover:to-purple-800/60 border-indigo-500/30 flex items-center justify-center gap-2 transition-all group">
+                    <div class="text-xl group-hover:rotate-12 transition-transform">🧪</div>
+                    <div class="font-black text-indigo-200 text-[10px] uppercase tracking-widest">Forskning</div>
                 </button>
             </div>
             
-            <!-- Mobile Money Print (Extra button row for small screens) -->
-            <div class="md:hidden col-span-1">
-                 <button onclick="printMoney(event)" class="w-full bg-red-500/20 border border-red-500/50 text-red-200 text-xs py-2 rounded-lg btn-press">
-                    🖨️ Trykk Penger (+50kr)
-                 </button>
-            </div>
         </footer>
     </div>
 
-    <!-- TECH TREE MODAL (POPUP) -->
-    <dialog id="tech-modal" class="bg-transparent p-0 w-full max-w-2xl backdrop:bg-black/80 backdrop:backdrop-blur-sm m-auto">
-        <div class="bg-slate-800 border border-slate-600 rounded-2xl shadow-2xl overflow-hidden modal-enter text-white mx-4">
-            <div class="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center">
-                <h2 class="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 flex items-center gap-2">
-                    <span>🧪</span> Forskningslab
+    <!-- TECH TREE MODAL -->
+    <dialog id="tech-modal" class="bg-transparent p-0 w-full max-w-lg backdrop:bg-black/80 backdrop:backdrop-blur-sm m-auto">
+        <div class="glass-panel border-slate-600 rounded-2xl shadow-2xl overflow-hidden modal-enter text-white mx-4 bg-[#0f172a]">
+            <div class="bg-slate-900/80 p-4 border-b border-white/5 flex justify-between items-center">
+                <h2 class="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 flex items-center gap-2">
+                    <span class="text-lg">🧪</span> FORSKNING
                 </h2>
                 <button onclick="toggleTechModal()" class="text-gray-400 hover:text-white text-xl font-bold px-2">&times;</button>
             </div>
-            
-            <div class="p-4 md:p-6 grid gap-4 max-h-[60vh] overflow-y-auto">
-                
-                <!-- Tech Card 1 -->
-                <div class="bg-slate-700/50 p-4 rounded-xl border border-slate-600 flex justify-between items-center hover:border-emerald-500 transition-colors group">
-                    <div>
-                        <h3 class="font-bold text-emerald-300 text-base md:text-lg">Kunstgjødsel</h3>
-                        <p class="text-xs text-gray-400 mb-2">Gjør at bønder produserer <span class="text-white font-bold">50% mer mat</span>.</p>
-                        <div class="text-[10px] bg-slate-800 inline-block px-2 py-1 rounded text-gray-400">Frigjør arbeidskraft</div>
-                    </div>
-                    <button onclick="buyTech('fertilizer', event)" id="tech-btn-fertilizer" class="bg-slate-800 hover:bg-emerald-600 border border-slate-600 text-white px-3 py-2 rounded-lg font-bold text-xs md:text-sm min-w-[70px] transition-colors">
-                        100 kr
-                    </button>
+            <div class="p-3 grid gap-3 max-h-[50vh] overflow-y-auto">
+                <div class="bg-slate-800/50 p-3 rounded-lg border border-white/5 flex justify-between items-center">
+                    <div><h3 class="font-bold text-emerald-300 text-sm">Kunstgjødsel</h3><p class="text-[10px] text-gray-400">+50% Matproduksjon</p></div>
+                    <button onclick="buyTech('fertilizer', event)" id="tech-btn-fertilizer" class="bg-slate-700 hover:bg-emerald-600 border border-white/10 text-white px-3 py-1.5 rounded-lg font-bold text-xs min-w-[60px]">100 kr</button>
                 </div>
-
-                <!-- Tech Card 2 -->
-                <div class="bg-slate-700/50 p-4 rounded-xl border border-slate-600 flex justify-between items-center hover:border-blue-500 transition-colors group opacity-50" id="card-steam">
-                    <div>
-                        <h3 class="font-bold text-blue-300 text-base md:text-lg">Dampmaskin</h3>
-                        <p class="text-xs text-gray-400 mb-2">Gjør at fabrikker tjener <span class="text-white font-bold">50% mer penger</span>.</p>
-                        <div class="text-[10px] bg-slate-800 inline-block px-2 py-1 rounded text-gray-400">Krever Kunstgjødsel</div>
-                    </div>
-                    <button onclick="buyTech('steam', event)" id="tech-btn-steam" class="bg-slate-800 hover:bg-blue-600 border border-slate-600 text-white px-3 py-2 rounded-lg font-bold text-xs md:text-sm min-w-[70px] transition-colors cursor-not-allowed">
-                        250 kr
-                    </button>
+                <div class="bg-slate-800/50 p-3 rounded-lg border border-white/5 flex justify-between items-center opacity-50" id="card-steam">
+                    <div><h3 class="font-bold text-blue-300 text-sm">Dampmaskin</h3><p class="text-[10px] text-gray-400">+50% Pengeproduksjon</p></div>
+                    <button onclick="buyTech('steam', event)" id="tech-btn-steam" class="bg-slate-700 hover:bg-blue-600 border border-white/10 text-white px-3 py-1.5 rounded-lg font-bold text-xs min-w-[60px] cursor-not-allowed">250 kr</button>
                 </div>
-
-                <!-- Tech Card 3 -->
-                <div class="bg-slate-700/50 p-4 rounded-xl border border-slate-600 flex justify-between items-center hover:border-pink-500 transition-colors group opacity-50" id="card-medicine">
-                    <div>
-                        <h3 class="font-bold text-pink-300 text-base md:text-lg">Vaksiner</h3>
-                        <p class="text-xs text-gray-400 mb-2">Gir umiddelbar <span class="text-white font-bold">befolkningsvekst (+5)</span>.</p>
-                        <div class="text-[10px] bg-slate-800 inline-block px-2 py-1 rounded text-gray-400">Reduserer dødelighet</div>
-                    </div>
-                    <button onclick="buyTech('medicine', event)" id="tech-btn-medicine" class="bg-slate-800 hover:bg-pink-600 border border-slate-600 text-white px-3 py-2 rounded-lg font-bold text-xs md:text-sm min-w-[70px] transition-colors cursor-not-allowed">
-                        500 kr
-                    </button>
+                <div class="bg-slate-800/50 p-3 rounded-lg border border-white/5 flex justify-between items-center opacity-50" id="card-medicine">
+                    <div><h3 class="font-bold text-purple-300 text-sm">Vaksiner</h3><p class="text-[10px] text-gray-400">+5 Befolkning (Boom)</p></div>
+                    <button onclick="buyTech('medicine', event)" id="tech-btn-medicine" class="bg-slate-700 hover:bg-purple-600 border border-white/10 text-white px-3 py-1.5 rounded-lg font-bold text-xs min-w-[60px] cursor-not-allowed">500 kr</button>
                 </div>
-
             </div>
         </div>
     </dialog>
 
-    <!-- GAME OVER MODAL -->
-    <div id="modal" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-slate-800 p-8 rounded-2xl max-w-md w-full text-center border border-slate-600 shadow-2xl">
-            <div class="text-6xl mb-4 animate-bounce" id="modal-icon">💀</div>
-            <h2 class="text-2xl md:text-3xl font-black text-white mb-2" id="modal-title">GAME OVER</h2>
-            <p class="text-gray-300 mb-6" id="modal-desc">...</p>
-            <button onclick="location.reload()" class="bg-white text-slate-900 font-bold px-8 py-3 rounded-full hover:bg-gray-200 transition-transform hover:scale-105 w-full">Spill på nytt</button>
+    <!-- GAME OVER / WIN -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center backdrop-blur-xl p-4">
+        <div class="bg-slate-900 p-6 rounded-3xl max-w-xs w-full text-center border border-slate-700 shadow-2xl relative overflow-hidden">
+             <div class="absolute inset-0 bg-gradient-to-b from-red-900/20 to-transparent" id="modal-bg"></div>
+            <div class="text-5xl mb-4 animate-bounce relative z-10" id="modal-icon">💀</div>
+            <h2 class="text-2xl font-black text-white mb-2 relative z-10" id="modal-title">GAME OVER</h2>
+            <p class="text-gray-400 mb-6 text-sm relative z-10" id="modal-desc">...</p>
+            <button onclick="location.reload()" class="relative z-10 bg-white text-slate-900 font-black px-6 py-3 rounded-xl hover:bg-gray-200 w-full text-sm">PRØV IGJEN</button>
         </div>
     </div>
 
     <script>
-        // --- GAME STATE ---
+        const GRID_ROWS = 6;
+        const GRID_COLS = 8;
+        const GRID_SIZE = GRID_ROWS * GRID_COLS;
+
         const state = {
             running: false,
             tickTimer: null,
             pop: 10,
-            food: 50,
-            money: 50,
+            food: 60, // Slight boost start
+            money: 40,
             printedMoney: 0,
             price: 10,
             inflation: 0,
@@ -309,267 +360,281 @@
             farmTech: 1.0,
             factoryTech: 1.0,
             phase: 1,
-            techs: []
+            techs: [],
+            bgTiles: [],
+            
+            // Mechanics
+            unrest: 0,
+            taxRate: 10,
+            welfareBaseCost: 25
         };
 
-        // --- CORE LOOP ---
+        function initBackground() {
+            state.bgTiles = [];
+            for(let i=0; i<GRID_SIZE; i++) {
+                const rnd = Math.random();
+                let icon = ''; 
+                if(rnd > 0.8) icon = '🌲'; else if(rnd > 0.7) icon = '🌳';
+                state.bgTiles.push(icon);
+            }
+        }
+
+        function renderCity() {
+            const grid = document.getElementById('sim-city-grid');
+            grid.innerHTML = '';
+            
+            const farmCount = state.farms;
+            const factoryCount = state.factories;
+            const maxHouses = GRID_SIZE - (farmCount + factoryCount);
+            const houseCount = Math.min(maxHouses, Math.ceil(state.pop / 2));
+            
+            for(let i=0; i<GRID_SIZE; i++) {
+                const tile = document.createElement('div');
+                let type = 'empty';
+                let icon = state.bgTiles[i]; 
+
+                if (i < farmCount) { type = 'farm'; icon = '🌾'; }
+                else if (i < farmCount + factoryCount) { type = 'factory'; icon = '🏭'; }
+                else if (i < farmCount + factoryCount + houseCount) { type = 'house'; icon = state.phase < 2 ? '⛺' : (state.phase < 3 ? '🏠' : '🏢'); }
+
+                tile.className = `iso-tile tile-${type}`;
+                if(icon) {
+                    const content = document.createElement('div');
+                    content.className = 'tile-content';
+                    content.innerText = icon;
+                    tile.appendChild(content);
+                }
+                grid.appendChild(tile);
+            }
+        }
+
         function tick() {
             if(!state.running) return;
 
-            // 1. Allocation Limit
+            // Allocation Limit
             const totalJobs = state.farmers + state.workers;
             if(totalJobs > state.pop) {
                 if(state.workers > 0) state.workers--;
                 else if(state.farmers > 0) state.farmers--;
                 updateSliders();
             }
+            const unemployed = state.pop - totalJobs;
 
-            // 2. Production
-            const foodProd = state.farmers * 6 * state.farmTech;
-            const moneyProd = state.workers * 8 * state.factoryTech;
+            // Tax Logic (Laffer Curve effect)
+            // 0-20% Tax: High Efficiency (100-90%)
+            // 20-50% Tax: Med Efficiency (90-60%)
+            // 50%+ Tax: Low Efficiency
+            const efficiency = Math.max(0.4, 1 - (state.taxRate / 80)); 
+            
+            // Production
+            const foodProd = state.farmers * 6 * state.farmTech; 
+            // Factories generate VALUE. Tax takes a cut.
+            const workerValue = state.workers * 10 * state.factoryTech * efficiency;
+            const taxIncome = workerValue * (state.taxRate / 100);
+            
             state.food += foodProd;
-            state.money += moneyProd;
+            state.money += taxIncome;
 
-            // 3. Consumption
+            // Consumption
             const consumption = Math.ceil(state.pop * 1.5);
             state.food -= consumption;
 
-            // 4. Malthus/Growth
+            // Unrest Logic 
+            let unrestChange = 0;
+            if(state.food <= 10) unrestChange += 2;
+            if(state.food <= 0) unrestChange += 5;
+            if(unemployed > 0) unrestChange += (unemployed * 0.2); // Unemployment hurts
+            if(state.taxRate > 25) unrestChange += 0.2; 
+            if(state.taxRate > 50) unrestChange += 1.5; 
+            
+            // Inflation causing unrest
+            if(state.inflation > 20) unrestChange += 0.5; 
+            
+            // Decay
+            if(state.food > state.pop * 5 && state.taxRate < 20 && unemployed === 0) unrestChange -= 1;
+            
+            state.unrest = Math.min(100, Math.max(0, state.unrest + unrestChange));
+
+            // Survival
             if(state.food < 0) {
                 state.food = 0;
                 if(Math.random() > 0.5) {
                     state.pop--;
-                    spawnFloatText(window.innerWidth/2, window.innerHeight/2, "☠️ Død", "text-red-500");
+                    spawnFloatText(window.innerWidth/2, window.innerHeight/2, "☠️", "text-red-500");
                 }
-                if(state.pop <= 0) gameOver("Sultedøden", "Samfunnet kollapset.", "💀");
+                if(state.pop <= 0) gameOver("SULTEDØDEN", "Samfunnet kollapset.", "💀");
             } else if(state.food > state.pop * 10) {
                 if(Math.random() > 0.7) {
                     state.pop++;
-                    spawnFloatText(window.innerWidth/2, window.innerHeight/2, "👶 Fødsel", "text-emerald-300");
+                    spawnFloatText(window.innerWidth/2, window.innerHeight/2, "👶", "text-emerald-300");
                 }
             }
 
-            // 5. Economy
-            const productivity = Math.max(1, (foodProd/2) + (moneyProd/2));
-            const inflationPush = (state.printedMoney / productivity) * 0.8;
-            const deflationPull = productivity * 0.02;
-            let targetPrice = 10 + inflationPush - deflationPull;
-            targetPrice = Math.max(5, targetPrice);
+            // Checks
+            if(state.unrest >= 100) gameOver("REVOLUSJON", "Folket styrtet deg.", "🔥");
+            if(state.unrest >= 80) showAlert("Høy Misnøye! Revolusjon nær!");
+
+            // Inflation Math
+            // Printed Money creates 'fake' demand.
+            // Inflation = (Printed Money / Total Real Value Production)
+            const goods = Math.max(1, (foodProd/2) + (workerValue/2));
+            const inflationPressure = (state.printedMoney / goods); 
             
+            // Inflation naturally wants to settle based on pressure
+            let targetPrice = 10 + (inflationPressure * 2);
             if(state.price < targetPrice) state.price += 0.5;
-            if(state.price > targetPrice) state.price -= 0.5;
+            if(state.price > targetPrice) state.price -= 0.2; // Prices stick downwards
             state.inflation = Math.floor(((state.price - 10) / 10) * 100);
 
-            if(state.inflation > 300) gameOver("Hyperinflasjon", "Pengene ble verdiløse.", "💸");
+            if(state.inflation > 500) gameOver("HYPERINFLASJON", "Pengene dine er null verdt.", "💸");
 
-            // 6. Score & Phase
+            // Score & Win
             state.score = Math.floor((state.pop * 10) + (state.money / 10) + (state.techs.length * 500));
+            // Adjust score for inflation (Real GDP)
             if(state.inflation > 0) state.score = Math.floor(state.score / (1 + (state.inflation/100)));
+            
+            if(state.score > 5000 && state.unrest < 20 && state.phase === 3) {
+                 gameOver("SEIER!", "Du bygget en rik, moderne sivilisasjon!", "🏆", true);
+                 return;
+            }
 
             updatePhase();
             updateUI();
         }
 
         function updatePhase() {
-            const factoryBtn = document.getElementById('btn-factory');
-            const lockIcon = document.getElementById('lock-icon');
-            
             if(state.score > 200 && state.phase < 2) {
                 state.phase = 2;
-                spawnFloatText(window.innerWidth/2, window.innerHeight/2, "FASE 2: INDUSTRI!", "text-blue-400 text-2xl");
-                factoryBtn.classList.remove('btn-disabled', 'opacity-50');
-                lockIcon.classList.add('hidden');
+                spawnFloatText(window.innerWidth/2, window.innerHeight/2, "FASE 2!", "text-blue-400 text-xl");
+                document.getElementById('btn-factory').classList.remove('btn-disabled', 'opacity-40');
+                document.getElementById('lock-icon').classList.add('hidden');
                 document.getElementById('sim-phase-text').innerText = "Fase 2: Industri";
-                document.getElementById('sim-phase-text').className = "text-[10px] font-bold uppercase tracking-widest text-blue-400";
             }
-            if(state.score > 1000 && state.phase < 3) {
+            if(state.score > 1500 && state.phase < 3) {
                 state.phase = 3;
                 document.getElementById('sim-phase-text').innerText = "Fase 3: Moderne";
-                document.getElementById('sim-phase-text').className = "text-[10px] font-bold uppercase tracking-widest text-purple-400";
             }
         }
 
-        // --- ACTIONS ---
         window.updateAllocation = function() {
             const farmersReq = parseInt(document.getElementById('slider-farmers').value);
             const workersReq = parseInt(document.getElementById('slider-workers').value);
-            
             let newFarmers = Math.min(farmersReq, state.farms);
             let newWorkers = Math.min(workersReq, state.factories);
             const total = newFarmers + newWorkers;
-            
             if(total > state.pop) {
                 const diff = total - state.pop;
                 if(newWorkers > 0) newWorkers = Math.max(0, newWorkers - diff);
                 else newFarmers = Math.max(0, newFarmers - diff);
             }
-
             state.farmers = newFarmers;
             state.workers = newWorkers;
             updateUI();
         }
 
-        window.build = function(type, e) {
-            let cost = 0;
-            let success = false;
-            let msg = "";
+        window.updateTax = function() {
+            state.taxRate = parseInt(document.getElementById('slider-tax').value);
+            document.getElementById('tax-display').innerText = state.taxRate;
+        }
 
-            if(type === 'farm') {
-                cost = 15;
-                if(state.money >= cost) {
-                    state.money -= cost;
-                    state.farms++;
-                    success = true;
-                    msg = "+1 Gård";
-                }
+        window.provideWelfare = function(e) {
+            // Welfare cost scales with inflation! 
+            const cost = Math.ceil(state.welfareBaseCost * (1 + (state.inflation/100)));
+            
+            if(state.money >= cost) {
+                state.money -= cost;
+                state.unrest = Math.max(0, state.unrest - 40); 
+                spawnFloatText(e.clientX, e.clientY, "❤️ -40% Misnøye", "text-pink-400");
+                updateUI();
+            } else {
+                spawnFloatText(e.clientX, e.clientY, `Mangler penger (${cost}kr)`, "text-gray-500");
             }
-            if(type === 'factory') {
-                cost = 50;
-                if(state.phase < 2) return; // Locked
-                if(state.money >= cost) {
-                    state.money -= cost;
-                    state.factories++;
-                    success = true;
-                    msg = "+1 Fabrikk";
-                }
-            }
+        }
+
+        window.printMoney = function(e) {
+            // "Crisis" mechanic: Get 100kr now, pay later with inflation
+            state.money += 100;
+            state.printedMoney += 100;
+            spawnFloatText(e.clientX, e.clientY, "+100 kr", "text-green-400");
+            setTimeout(() => spawnFloatText(e.clientX, e.clientY-30, "INFLASJON!", "text-red-500 text-xs font-black"), 300);
+            updateUI();
+        }
+
+        window.build = function(type, e) {
+            let cost = 0; let success = false;
+            // Costs also scale slightly with inflation to simulate material cost
+            const inflMult = 1 + (state.inflation/200); 
+
+            if(type === 'farm') { cost = Math.ceil(15 * inflMult); if(state.money >= cost) { state.money -= cost; state.farms++; success = true; } }
+            if(type === 'factory') { cost = Math.ceil(50 * inflMult); if(state.phase < 2) return; if(state.money >= cost) { state.money -= cost; state.factories++; success = true; } }
 
             if(success) {
                 spawnFloatText(e.clientX, e.clientY, `-${cost} kr`, "text-red-500");
-                setTimeout(() => spawnFloatText(e.clientX, e.clientY - 40, msg, "text-emerald-400"), 200);
-                updateAllocation(); 
-                updateUI();
+                updateAllocation(); updateUI();
+            } else if(!success && type !== 'factory') {
+                 spawnFloatText(e.clientX, e.clientY, `Mangler penger (${cost}kr)`, "text-gray-500");
             }
         }
 
         window.toggleTechModal = function() {
             const modal = document.getElementById('tech-modal');
-            if(modal.open) modal.close();
-            else modal.showModal();
+            if(modal.open) modal.close(); else modal.showModal();
         }
 
         window.buyTech = function(id, e) {
             if(state.techs.includes(id)) return;
-            let cost = 0;
-            let success = false;
-            
-            if(id === 'fertilizer') {
-                cost = 100;
-                if(state.money >= cost) {
-                    state.money -= cost;
-                    state.farmTech = 1.5;
-                    state.techs.push(id);
-                    document.getElementById('tech-btn-fertilizer').innerText = "Kjøpt";
-                    document.getElementById('tech-btn-fertilizer').className = "bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm";
-                    
-                    // Unlock Steam visual
-                    document.getElementById('card-steam').classList.remove('opacity-50');
-                    document.getElementById('tech-btn-steam').classList.remove('cursor-not-allowed');
-                    success = true;
-                }
-            }
-            else if(id === 'steam') {
-                cost = 250;
-                // Pre-req check
-                if(!state.techs.includes('fertilizer')) return;
-
-                if(state.money >= cost) {
-                    state.money -= cost;
-                    state.factoryTech = 1.5;
-                    state.techs.push(id);
-                    document.getElementById('tech-btn-steam').innerText = "Kjøpt";
-                    document.getElementById('tech-btn-steam').className = "bg-blue-600 text-white px-4 py-2 rounded-lg text-sm";
-                    
-                    // Unlock Medicine visual
-                    document.getElementById('card-medicine').classList.remove('opacity-50');
-                    document.getElementById('tech-btn-medicine').classList.remove('cursor-not-allowed');
-                    success = true;
-                }
-            }
-            else if(id === 'medicine') {
-                cost = 500;
-                if(!state.techs.includes('steam')) return;
-
-                 if(state.money >= cost) {
-                    state.money -= cost;
-                    state.techs.push(id);
-                    state.pop += 5; 
-                    document.getElementById('tech-btn-medicine').innerText = "Kjøpt";
-                    document.getElementById('tech-btn-medicine').className = "bg-pink-600 text-white px-4 py-2 rounded-lg text-sm";
-                    success = true;
-                 }
-            }
+            let cost = 0; let success = false;
+            if(id === 'fertilizer') { cost = 100; if(state.money >= cost) { state.money -= cost; state.farmTech = 1.5; state.techs.push(id); success = true; document.getElementById('card-steam').classList.remove('opacity-50'); document.getElementById('tech-btn-steam').classList.remove('cursor-not-allowed'); } }
+            else if(id === 'steam') { cost = 250; if(state.techs.includes('fertilizer') && state.money >= cost) { state.money -= cost; state.factoryTech = 1.5; state.techs.push(id); success = true; document.getElementById('card-medicine').classList.remove('opacity-50'); document.getElementById('tech-btn-medicine').classList.remove('cursor-not-allowed'); } }
+            else if(id === 'medicine') { cost = 500; if(state.techs.includes('steam') && state.money >= cost) { state.money -= cost; state.pop += 5; state.techs.push(id); success = true; } }
 
             if(success) {
-                // Assuming button click inside modal, coordinates might be tricky relative to viewport, so just center float
-                const rect = e.target.getBoundingClientRect();
-                spawnFloatText(rect.left + 20, rect.top, `-${cost} kr`, "text-red-500");
+                const btn = document.getElementById('tech-btn-' + id);
+                btn.innerText = "KJØPT"; btn.classList.add('opacity-50');
                 updateUI();
             }
         }
 
-        window.printMoney = function(e) {
-            state.money += 50;
-            state.printedMoney += 50;
-            spawnFloatText(e.clientX, e.clientY, "+50 kr", "text-green-400");
-            setTimeout(() => spawnFloatText(e.clientX, e.clientY-30, "INFLASJON!", "text-red-500 text-sm"), 300);
-            updateUI();
-        }
-
-        // --- UI UPDATES ---
         function updateUI() {
-            // Stats
             document.getElementById('sim-money').innerText = Math.floor(state.money) + " kr";
             document.getElementById('sim-pop').innerText = state.pop;
             document.getElementById('sim-food').innerText = Math.floor(state.food);
             document.getElementById('sim-inflation').innerText = state.inflation + "%";
-            document.getElementById('sim-score').innerText = state.score;
+            
+            const unrestBar = document.getElementById('sim-unrest-bar');
+            unrestBar.style.width = state.unrest + '%';
+            document.getElementById('sim-unrest-val').innerText = Math.floor(state.unrest) + "%";
+            
+            const welfareBtn = document.getElementById('btn-welfare');
+            const welfareCost = Math.ceil(state.welfareBaseCost * (1 + (state.inflation/100)));
+            document.getElementById('welfare-cost').innerText = welfareCost;
 
-            // Job Allocations (Sliders & Text)
+            if(state.unrest > 50) {
+                unrestBar.parentElement.parentElement.classList.add('critical-unrest');
+                welfareBtn.classList.add('welfare-needed');
+            } else {
+                unrestBar.parentElement.parentElement.classList.remove('critical-unrest');
+                welfareBtn.classList.remove('welfare-needed');
+            }
+
             document.getElementById('cc-farmers').innerText = state.farmers;
             document.getElementById('cc-max-farmers').innerText = state.farms;
             document.getElementById('cc-workers').innerText = state.workers;
             document.getElementById('cc-max-workers').innerText = state.factories;
             
             const unemployed = state.pop - (state.farmers + state.workers);
-            document.getElementById('sim-unemployed').innerText = unemployed + " ledige";
             document.getElementById('cc-unemployed').innerText = unemployed;
             document.getElementById('cc-unemployed').className = unemployed > 0 ? "text-yellow-400 font-bold" : "text-gray-500";
-
-            // Sliders
-            const sFarm = document.getElementById('slider-farmers');
-            sFarm.max = Math.min(state.pop, state.farms);
-            sFarm.value = state.farmers;
             
-            const sWork = document.getElementById('slider-workers');
-            sWork.max = Math.min(state.pop, state.factories);
-            sWork.value = state.workers;
+            // This line was causing the error because the element was missing in 3.2
+            // Now that I've added the #sim-score div back to the HTML, it will work.
+            const scoreEl = document.getElementById('sim-score');
+            if(scoreEl) scoreEl.innerText = state.score;
 
-            // Changes/Rates
-            const fChange = (state.farmers * 6 * state.farmTech) - Math.ceil(state.pop * 1.5);
-            const fEl = document.getElementById('sim-food-change');
-            fEl.innerText = (fChange >= 0 ? "+" : "") + Math.floor(fChange) + "/t";
-            fEl.className = fChange < 0 ? "text-[9px] text-red-500 font-bold shake-anim" : "text-[9px] text-gray-500";
-            
-            const mChange = (state.workers * 8 * state.factoryTech);
-            document.getElementById('sim-money-change').innerText = "+" + Math.floor(mChange) + "/t";
+            document.getElementById('slider-farmers').value = state.farmers;
+            document.getElementById('slider-workers').value = state.workers;
 
-            // Visual City
-            const city = document.getElementById('sim-city-view');
-            const targetCount = state.farms + state.factories + Math.ceil(state.pop/2);
-            if(city.childElementCount !== targetCount) {
-                city.innerHTML = '';
-                for(let i=0; i<state.farms; i++) city.appendChild(createIcon('🌾'));
-                for(let i=0; i<state.factories; i++) city.appendChild(createIcon('🏭'));
-                for(let i=0; i<Math.ceil(state.pop/2); i++) city.appendChild(createIcon(state.phase < 2 ? '⛺' : '🏠'));
-            }
-        }
-
-        function createIcon(emoji) {
-            const d = document.createElement('div');
-            d.className = 'sim-item';
-            d.innerText = emoji;
-            return d;
+            renderCity();
         }
 
         function updateSliders() {
@@ -577,7 +642,15 @@
             document.getElementById('slider-workers').value = state.workers;
         }
 
-        // --- SYSTEM ---
+        function showAlert(msg) {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = "bg-red-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg animate-pulse";
+            alert.innerText = msg;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 2000);
+        }
+
         window.attemptStart = function() {
             const pass = document.getElementById('pass-input').value.toLowerCase().trim();
             if(pass === 'økonomi') {
@@ -596,26 +669,33 @@
             document.getElementById('btn-pause').innerText = state.running ? "⏸️" : "▶️";
         }
         
-        function gameOver(title, desc, icon) {
+        function gameOver(title, desc, icon, win=false) {
             state.running = false;
             clearInterval(state.tickTimer);
-            document.getElementById('modal').classList.remove('hidden');
+            const modal = document.getElementById('modal');
+            modal.classList.remove('hidden');
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-desc').innerText = desc;
             document.getElementById('modal-icon').innerText = icon;
+            
+            if(win) {
+                 document.getElementById('modal-title').classList.add('text-yellow-400');
+                 document.getElementById('modal-bg').classList.remove('from-red-900/20');
+                 document.getElementById('modal-bg').classList.add('from-yellow-900/20');
+            }
         }
 
         window.spawnFloatText = function(x, y, text, colorClass) {
             const el = document.createElement('div');
             el.className = `floating-text ${colorClass}`;
             el.innerText = text;
-            el.style.left = (x - 20) + 'px'; 
-            el.style.top = (y - 20) + 'px';
+            el.style.left = (x - 10) + 'px'; 
+            el.style.top = (y - 10) + 'px';
             document.body.appendChild(el);
             setTimeout(() => el.remove(), 800);
         }
 
-        // Init
+        initBackground();
         updateUI();
     </script>
 </body>
