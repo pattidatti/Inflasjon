@@ -61,6 +61,15 @@
             margin-top: 1.5rem;
             border-radius: 0 12px 12px 0;
         }
+        
+        .info-text {
+            color: #374151;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+        .info-text strong {
+            color: #111827;
+        }
 
         /* --- Simulator Specifics --- */
         .sim-grid {
@@ -153,22 +162,26 @@
         <div class="p-6 md:p-10">
             <div class="mb-8 border-b pb-4">
                 <h2 class="text-3xl font-bold text-gray-900 mb-2">1. Den Demografiske Overgangen</h2>
-                <p class="text-gray-600">Hvordan befolkningen endrer seg over tid (PDF s. 2-6).</p>
+                <p class="text-gray-600">Modellen viser hvordan fødsels- og dødsrater endrer seg når et land utvikler seg fra fattigdom til rikdom.</p>
             </div>
             
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 <div class="lg:col-span-5 space-y-6">
+                    <div class="info-text">
+                        <p class="mb-4">
+                            Overgangen skjer vanligvis i et fast mønster. Det starter med at <strong>dødsraten faller</strong> (bedre hygiene, medisiner, mat), mens <strong>fødselsraten forblir høy</strong> en stund til. Dette skaper en "befolkningseksplosjon" i Fase 2 og 3.
+                        </p>
+                        <p>
+                            Senere velger folk å få færre barn fordi barn blir en kostnad heller enn arbeidskraft, og kvinner tar utdanning. Til slutt flater veksten ut.
+                        </p>
+                    </div>
                     <div class="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-100 shadow-sm">
-                        <label class="block text-sm font-bold text-purple-900 uppercase tracking-wider mb-4">Dra for å endre fase:</label>
+                        <label class="block text-sm font-bold text-purple-900 uppercase tracking-wider mb-4">Dra for å utforske fasene:</label>
                         <input type="range" id="demo-slider" min="1" max="5" value="1" step="1" oninput="updateDemography()">
                         <div class="mt-6 transition-all duration-300" id="demo-content">
                             <h3 class="text-2xl font-bold text-purple-900 mb-2" id="demo-phase-title">Fase 1</h3>
                             <div class="text-gray-700 leading-relaxed space-y-3" id="demo-phase-desc"></div>
                         </div>
-                    </div>
-                    <div class="fact-box">
-                        <h4 class="font-bold text-blue-900 mb-2">Befolkningspyramiden</h4>
-                        <p class="text-sm text-gray-700">Pyramiden viser helsetilstanden i et land. En bred bunn betyr mange barn (framtidig arbeidskraft), mens en bred topp betyr en aldrende befolkning som trenger omsorg.</p>
                     </div>
                 </div>
 
@@ -194,7 +207,7 @@
         <div class="p-6 md:p-10 bg-gradient-to-b from-amber-50 to-white">
             <div class="mb-8 border-b pb-4">
                 <h2 class="text-3xl font-bold text-gray-900 mb-2">2. Kampen om Ressursene</h2>
-                <p class="text-gray-600">Er det nok til alle? Malthus (Pessimist) vs. Boserup (Optimist).</p>
+                <p class="text-gray-600">To syn på befolkningsvekst: Er flere mennesker et problem eller en ressurs?</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -213,16 +226,21 @@
                 </div>
 
                 <div class="flex flex-col justify-between">
+                    <div class="info-text mb-4">
+                        <ul class="space-y-4">
+                            <li class="p-3 bg-red-50 rounded-lg border border-red-100">
+                                <strong>Thomas Malthus (Pessimisten):</strong> Mente at befolkningen vokser geometrisk (1, 2, 4, 8), mens matproduksjonen bare vokser aritmetisk (1, 2, 3, 4). Resultatet blir uunngåelig sult og krig som reduserer befolkningen igjen.
+                            </li>
+                            <li class="p-3 bg-green-50 rounded-lg border border-green-100">
+                                <strong>Ester Boserup (Optimisten):</strong> Mente at "nød lærer naken kvinne å spinne". Når det blir mange mennesker, blir vi tvunget til å finne opp nye løsninger (teknologi) som øker matproduksjonen dramatisk (f.eks. kunstgjødsel).
+                            </li>
+                        </ul>
+                    </div>
                     <div class="austrian-box mt-0">
                         <div class="austrian-title">💡 Markedet løser problemet</div>
                         <p class="text-sm text-gray-800 mb-2">
-                            I et fritt marked vil <strong>prissignaler</strong> forhindre sult:
+                            I et fritt marked fungerer priser som signaler. Hvis mat blir knapp, øker prisen. Høy pris motiverer bønder og oppfinnere til å produsere mer, som støtter Boserups teori.
                         </p>
-                        <ol class="list-decimal list-inside text-sm text-gray-800 space-y-1">
-                            <li>Matmangel -> Prisen øker.</li>
-                            <li>Høy pris -> Lønnsomt å finne opp teknologi (traktorer).</li>
-                            <li>Teknologi -> Mer mat (Boserup-effekten).</li>
-                        </ol>
                     </div>
                     <button id="btn-innovate" onclick="boserupInnovation(event)" class="mt-6 w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-lg transition-all group relative overflow-hidden">
                         <div class="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
@@ -243,7 +261,7 @@
     <section id="section-money" class="card border-t-8 border-t-blue-600 scroll-mt-32">
         <div class="p-6 md:p-10">
             <h2 class="text-3xl font-bold text-gray-900 mb-2">3. Hvorfor bruker vi penger?</h2>
-            <p class="text-gray-600 text-lg mb-8">Penger løser problemet med å bytte varer direkte.</p>
+            <p class="text-gray-600 text-lg mb-8">Penger løser problemet med "Sammenfallende behov" (Coincidence of Wants).</p>
             
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="lg:col-span-2">
@@ -253,15 +271,17 @@
                 </div>
                 
                 <div class="flex flex-col justify-center space-y-6">
+                    <div class="info-text">
+                        <p class="mb-3">
+                            <strong>Naturalhandel (Byttehandel):</strong> Hvis du har egg og vil ha sko, må du finne en skomaker som tilfeldigvis vil ha egg akkurat nå. Dette er ineffektivt og kalles problemet med "sammenfallende behov".
+                        </p>
+                        <p>
+                            <strong>Penger:</strong> Fungerer som et universelt byttemiddel. Skomakeren tar imot penger for skoene, fordi han vet at han kan bruke pengene til å kjøpe hva som helst (også egg) senere. Penger muliggjør spesialisering og sivilisasjon.
+                        </p>
+                    </div>
                     <div class="space-y-3">
                         <button onclick="setTradeMode('barter')" id="btn-barter" class="w-full text-left px-6 py-4 rounded-xl border-2 font-bold transition-all bg-white border-blue-600 text-blue-700 shadow-md hover:bg-blue-50">1. Naturalhandel (Ineffektivt)</button>
                         <button onclick="setTradeMode('money')" id="btn-money" class="w-full text-left px-6 py-4 rounded-xl border-2 font-bold transition-all bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-green-400">2. Pengesystem (Effektivt)</button>
-                    </div>
-                    <div class="austrian-box">
-                        <div class="austrian-title">💡 Penger som målestokk</div>
-                        <p class="text-sm text-gray-800">
-                            Penger er "økonomiens språk". Hvis pengenes verdi er stabil, kan vi beregne priser og bygge solide bedrifter. Hvis pengene mister verdi (inflasjon), blir språket uforståelig, og økonomien fungerer dårligere.
-                        </p>
                     </div>
                 </div>
             </div>
@@ -272,7 +292,7 @@
     <section id="section-rome" class="card border-t-8 border-t-yellow-600 scroll-mt-32">
         <div class="p-6 md:p-10">
             <h2 class="text-3xl font-bold text-gray-900 mb-2">4. Romerriket: Historiens første inflasjon</h2>
-            <p class="text-gray-600 text-lg mb-8">Hva skjer når keiseren "jukser" med pengene?</p>
+            <p class="text-gray-600 text-lg mb-8">Hva skjer når staten "jukser" med pengene?</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                 <div>
@@ -292,18 +312,22 @@
                 </div>
 
                 <div class="space-y-6">
-                    <h3 class="font-bold text-xl text-yellow-900">Utvanning av valutaen</h3>
-                    <p class="text-gray-700">
-                        Romerske keisere (som Nero) trengte penger til krig og luksusfester. De ville ikke øke skattene direkte, for da ble folket sinte.
-                    </p>
-                    <p class="text-gray-700">
-                        Løsningen? De smeltet om gullmyntene og blandet inn billig kobber. Plutselig hadde de "flere" mynter!
-                    </p>
+                    <h3 class="font-bold text-xl text-yellow-900">Utvanning (Debasement)</h3>
+                    <div class="info-text">
+                        <p class="mb-4">
+                            Romerske keisere som Nero trengte mer penger enn de hadde i skatteinntekter. De ønsket ikke å øke skattene (som er upopulært), så de fant en "smart" løsning:
+                        </p>
+                        <p class="mb-4">
+                            De samlet inn gullmynter, smeltet dem om, og blandet inn billig kobber. Plutselig hadde de "flere" mynter! Men myntene var mindre verdt.
+                        </p>
+                        <p>
+                            Da markedet oppdaget at myntene var utvannet, krevde kjøpmenn flere mynter for de samme varene. Dette er definisjonen på inflasjon: Pengemengden øker uten at varemengden øker.
+                        </p>
+                    </div>
                     <div class="austrian-box">
                         <div class="austrian-title">💡 Østerriksk Perspektiv</div>
                         <p class="text-sm text-gray-800">
-                            Dette er tyveri. Når staten øker pengemengden uten at det finnes flere varer, stjeler de kjøpekraft fra folket. 
-                            Romerrikets økonomi kollapset fordi ingen stolte på pengene lenger. Handelen stoppet opp, og samfunnet gikk tilbake til byttehandel.
+                            Dette er i praksis tyveri. Staten stjeler kjøpekraft fra folket ved å vanne ut valutaen. Romerrikets økonomi kollapset til slutt fordi ingen stolte på pengene.
                         </p>
                     </div>
                 </div>
@@ -319,19 +343,23 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div class="space-y-6">
-                    <p class="text-gray-700">
-                        En bank trenger ikke ha pengene den låner ut. I "Gullbanc 1600" er du en gullsmed som oppdager at du kan skrive ut flere kvitteringer (sedler) enn du har gull i hvelvet.
-                    </p>
+                    <div class="info-text">
+                        <p class="mb-4">
+                            Mange tror at en bank bare låner ut pengene som andre sparer der. Slik er det ikke. I dagens system (Brøkdelsreserver / Fractional Reserve Banking) kan banker låne ut penger de <em>ikke</em> har.
+                        </p>
+                        <p class="mb-4">
+                            Når du tar opp et lån på 1 million, trykker banken i praksis inn tall på kontoen din. Nye penger er skapt. Dette øker pengemengden i samfunnet.
+                        </p>
+                    </div>
                     <div class="austrian-box">
                         <div class="austrian-title">💡 Boom & Bust (Konjunkturer)</div>
                         <p class="text-sm text-gray-800 mb-2">
-                            Når banker trykker "falske penger" (lån uten dekning), skjer dette:
+                            Dette skaper kunstige svingninger i økonomien:
                         </p>
-                        <ol class="list-decimal list-inside text-sm text-gray-800 space-y-1">
-                            <li><strong>Boom (Festen):</strong> Det flyter over av billige penger. Bedrifter starter prosjekter som egentlig ikke er lønnsomme. Alle tror de er rike.</li>
-                            <li><strong>Bust (Bakrusen):</strong> Prisene stiger (inflasjon). Det avsløres at det ikke finnes nok ekte ressurser. Prosjektene går konkurs.</li>
+                        <ol class="list-decimal list-inside text-sm text-gray-800 space-y-2">
+                            <li><strong>Boom (Festen):</strong> Det flyter over av "nye penger". Renten er lav. Bedrifter starter prosjekter som egentlig ikke er lønnsomme.</li>
+                            <li><strong>Bust (Bakrusen):</strong> Prisene stiger (inflasjon) fordi det er for mye penger. Renten må opp. De dårlige prosjektene går konkurs.</li>
                         </ol>
-                        <p class="text-sm text-gray-800 mt-2 font-bold">Resesjon er markedets måte å rydde opp i feilene fra festen.</p>
                     </div>
                 </div>
 
@@ -366,7 +394,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <div class="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-md">
                     <p class="text-sm text-gray-600 mb-6">
-                        Hvis du legger 1000 kr i madrassen, mister de verdi hvert år fordi staten øker pengemengden.
+                        Inflasjon er ikke at varer blir dyrere, men at <strong>pengene dine blir mindre verdt</strong> fordi staten lager for mange av dem.
                     </p>
                     <label class="block text-sm font-bold text-gray-700 mb-2">Årlig inflasjon: <span id="val-rate" class="text-red-600 text-xl font-black">2.0</span>%</label>
                     <input type="range" id="input-rate" min="0" max="15" value="2" step="0.5" oninput="updateInflation()">
@@ -377,28 +405,30 @@
                 </div>
 
                 <div class="space-y-6">
-                    <h3 class="font-bold text-xl text-red-900">Cantillon-effekten: Ulikhet</h3>
-                    <p class="text-gray-700">
-                        Mange tror inflasjon treffer alle likt. Det er feil. Når nye penger trykkes, sprer de seg sakte gjennom systemet som honning.
-                    </p>
-                    <ul class="space-y-4">
-                        <li class="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm flex gap-3">
-                            <span class="text-2xl">💰</span>
-                            <div>
-                                <strong>1. Vinnerne (Først til mølla):</strong> Staten, banker og store investorer får de nye pengene først. De kan kjøpe aksjer og eiendom til <em>gamle, lave priser</em>.
-                            </div>
-                        </li>
-                        <li class="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm flex gap-3">
-                            <span class="text-2xl">💸</span>
-                            <div>
-                                <strong>2. Taperne (Sist i køen):</strong> Vanlige lønnsmottakere, trygdede og sparere. Når pengene endelig når dem (som lønn), har prisene på mat og strøm allerede steget.
-                            </div>
-                        </li>
-                    </ul>
+                    <h3 class="font-bold text-xl text-red-900">Cantillon-effekten: Hvorfor ulikhet øker</h3>
+                    <div class="info-text">
+                        <p class="mb-3">
+                            Richard Cantillon (1700-tallet) oppdaget at inflasjon ikke treffer alle likt. Nye penger sprer seg ujevnt:
+                        </p>
+                        <ul class="space-y-4">
+                            <li class="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm flex gap-3">
+                                <span class="text-2xl">💰</span>
+                                <div>
+                                    <strong>1. De som får pengene først (Staten/Banker):</strong> De kan bruke de nye pengene <em>før</em> prisene har steget. De kjøper aksjer, boliger og varer billig.
+                                </div>
+                            </li>
+                            <li class="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm flex gap-3">
+                                <span class="text-2xl">💸</span>
+                                <div>
+                                    <strong>2. De som får pengene sist (Lønnsmottakere/Trygdede):</strong> Når de nye pengene endelig når vanlige folk (gjennom lønn), har prisene på mat og strøm allerede steget. De har mistet kjøpekraft.
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
                     <div class="austrian-box">
-                        <div class="austrian-title">💡 Inflasjon øker forskjellene</div>
+                        <div class="austrian-title">💡 En skjult skatt</div>
                         <p class="text-sm text-gray-800">
-                            Inflasjon er en overføring av rikdom fra de fattige (som har kontanter) til de rike (som har gjeld og eiendeler). Det er en skjult skatt som ikke vedtas i Stortinget.
+                            Inflasjon fungerer som en skjult skatt som overfører rikdom fra vanlige folk (som sparer i penger) til staten og de rike (som har gjeld og eiendeler).
                         </p>
                     </div>
                 </div>
@@ -413,18 +443,21 @@
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div class="space-y-6">
-                    <p class="text-gray-700">
-                        PDF-en (s. 66) lister opp kravene for at et land skal bli rikt. Ett av de viktigste punktene er <strong>"En stabil valuta"</strong>.
-                    </p>
-                    <h3 class="font-bold text-lg text-cyan-900">Hvorfor er stabil valuta viktig?</h3>
-                    <p class="text-gray-700">
-                        For å klatre på rikdomsstigen (fra sko til sykkel til bil), må du kunne <strong>spare</strong>. Sparing er å ofre forbruk i dag for å få det bedre i morgen.
-                    </p>
+                    <div class="info-text">
+                        <p class="mb-4">
+                            Hans Rosling delte verden inn i 4 inntektsnivåer. For å klatre fra nivå 1 (fattigdom) til nivå 4 (rikdom), trenger et land visse forutsetninger, som fred, eiendomsrett og investeringer.
+                        </p>
+                        <p class="mb-4">
+                            Men en av de viktigste faktorene (fra PDF s. 66) er <strong>"En stabil valuta"</strong>. Hvorfor?
+                        </p>
+                        <p>
+                            For å kjøpe en sykkel eller starte en bedrift, må du kunne <strong>spare</strong>. Hvis pengene dine mister verdi (høy inflasjon), er det umulig å spare. Da bruker folk opp pengene med en gang, og ingen investerer i fremtiden (fabrikker, maskiner). Uten investeringer, ingen vekst.
+                        </p>
+                    </div>
                     <div class="austrian-box">
-                        <div class="austrian-title">💡 Inflasjon knekker stigen</div>
+                        <div class="austrian-title">💡 Inflasjon ødelegger stigen</div>
                         <p class="text-sm text-gray-800">
-                            Hvis penger mister verdi raskt (høy inflasjon), er det umulig å spare til en sykkel eller en utdanning. Pengene dine "råtner" i lomma. 
-                            Folk slutter å spare og bruker alt med en gang. Uten sparing finnes det ingen penger til å bygge fabrikker eller kjøpe maskiner. Da stopper utviklingen opp, og folk blir sittende fast i fattigdom.
+                            Ustabil valuta knekker "rikdomsstigen". Det tvinger folk til å forbli i fattigdom fordi de ikke kan planlegge langsiktig.
                         </p>
                     </div>
                 </div>
@@ -460,7 +493,7 @@
             <div class="mb-6 border-b border-gray-700 pb-4 flex flex-col md:flex-row justify-between items-start gap-4 relative z-10">
                 <div>
                     <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-2">Samfunnssimulatoren</h2>
-                    <p class="text-gray-400 text-sm">Strategi: Bygg <strong>Kapital</strong> for å øke produksjon. Unngå <strong>Inflasjon</strong> for å bevare poengsummen.</p>
+                    <p class="text-gray-400 text-sm">Strategi: Start med <strong>Gårder</strong> for å overleve. Bygg <strong>Fabrikker</strong> senere for rikdom.</p>
                 </div>
                 <div class="text-right flex gap-3">
                     <button onclick="startSim()" id="sim-start-btn" class="px-6 py-2 bg-green-600 hover:bg-green-500 rounded-lg font-bold shadow-lg transition-all transform hover:scale-105 flex items-center gap-2">
@@ -480,7 +513,7 @@
                 <div class="flex justify-between items-end mb-2">
                     <div>
                         <span class="text-xs text-gray-400 uppercase font-bold block mb-1">Nåværende Fase</span>
-                        <span id="sim-phase-text" class="text-2xl font-black text-white">Fase 1: Primitiv</span>
+                        <span id="sim-phase-text" class="text-2xl font-black text-white">Fase 1: Jordbrukssamfunn</span>
                     </div>
                     <div class="text-right">
                         <span class="text-xs text-gray-400 uppercase font-bold block mb-1">Score / Neste Mål</span>
@@ -488,18 +521,12 @@
                     </div>
                 </div>
                 <div class="w-full bg-gray-900 rounded-full h-6 overflow-hidden border border-gray-600 relative">
-                    <!-- Target Marker line -->
-                    <div class="absolute top-0 bottom-0 w-0.5 bg-white z-20 opacity-50" style="left: 20%"></div>
-                    <div class="absolute top-0 bottom-0 w-0.5 bg-white z-20 opacity-50" style="left: 40%"></div>
-                    <div class="absolute top-0 bottom-0 w-0.5 bg-white z-20 opacity-50" style="left: 60%"></div>
-                    <div class="absolute top-0 bottom-0 w-0.5 bg-white z-20 opacity-50" style="left: 80%"></div>
-                    
-                    <div id="sim-progress" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full w-0 transition-all duration-1000 relative">
+                    <div id="sim-progress" class="bg-gradient-to-r from-green-500 via-yellow-500 to-indigo-500 h-full w-0 transition-all duration-1000 relative">
                         <div class="absolute right-0 top-0 bottom-0 w-1 bg-white animate-pulse"></div>
                     </div>
                 </div>
                 <div class="flex justify-between text-[10px] text-gray-500 mt-1 uppercase font-bold px-1">
-                    <span>Start</span>
+                    <span>Jordbruk</span>
                     <span>Vekst</span>
                     <span>Industri</span>
                     <span>Moderne</span>
@@ -539,17 +566,17 @@
                             <div class="text-xl text-white font-mono font-bold" id="sim-food">0</div>
                             <div class="absolute bottom-0 left-0 right-0 h-1 bg-green-900"><div id="bar-food" class="h-full bg-green-500" style="width: 0%"></div></div>
                         </div>
-                        <!-- Capital -->
+                        <!-- Farms -->
                         <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
-                            <div class="text-[10px] text-yellow-400 font-bold uppercase mb-1">Realkapital 🏭</div>
-                            <div class="text-xl text-white font-mono font-bold" id="sim-capital">0</div>
-                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-yellow-900"><div id="bar-cap" class="h-full bg-yellow-500" style="width: 0%"></div></div>
+                            <div class="text-[10px] text-amber-400 font-bold uppercase mb-1">Gårder 🌾</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-farms">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-amber-900"><div id="bar-farms" class="h-full bg-amber-500" style="width: 0%"></div></div>
                         </div>
-                        <!-- Inflation -->
+                         <!-- Factories -->
                         <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
-                            <div class="text-[10px] text-red-400 font-bold uppercase mb-1">Inflasjon 🔥</div>
-                            <div class="text-xl text-white font-mono font-bold" id="sim-inflation">0%</div>
-                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-red-900"><div id="bar-inf" class="h-full bg-red-500" style="width: 0%"></div></div>
+                            <div class="text-[10px] text-indigo-400 font-bold uppercase mb-1">Fabrikker 🏭</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-factories">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-indigo-900"><div id="bar-factories" class="h-full bg-indigo-500" style="width: 0%"></div></div>
                         </div>
                     </div>
 
@@ -558,10 +585,16 @@
                          <div class="flex items-center gap-2">
                              <span>💵 Kasse:</span>
                              <span id="sim-money" class="text-yellow-400 font-bold text-sm">0</span>
+                             <span class="text-green-500 text-[10px] ml-1" id="sim-income">(+0/t)</span>
+                         </div>
+                         <!-- RE-ADDED PRICE DISPLAY TO FIX JS ERROR -->
+                         <div class="flex items-center gap-2">
+                             <span>🍞 Pris:</span>
+                             <span id="sim-price" class="text-gray-300 font-bold">10 kr</span>
                          </div>
                          <div class="flex items-center gap-2">
-                             <span>🏷️ Pris (Brød):</span>
-                             <span id="sim-price" class="text-gray-300 font-bold">10 kr</span>
+                             <span title="Inflasjon gjør pengene mindre verdt">🔥 Inflasjon:</span>
+                             <span id="sim-inflation" class="text-red-400 font-bold">0%</span>
                          </div>
                     </div>
                 </div>
@@ -573,56 +606,51 @@
                     <div class="bg-slate-800 p-4 rounded-xl border border-gray-700 shadow-xl">
                         <h4 class="font-bold text-gray-400 mb-4 border-b border-gray-600 pb-2 uppercase text-[10px] tracking-widest">Dine Valg (Strategi)</h4>
                         
-                        <!-- INVEST -->
-                        <button onclick="simAction('invest', event)" id="btn-invest" class="w-full mb-3 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800/50 hover:border-blue-500 rounded-lg p-3 text-left transition-all group relative overflow-hidden">
+                        <!-- BUILD FARM -->
+                        <button onclick="simAction('farm', event)" id="btn-farm" class="w-full mb-3 bg-amber-900/40 hover:bg-amber-900/60 border border-amber-800/50 hover:border-amber-500 rounded-lg p-3 text-left transition-all group relative overflow-hidden">
                             <div class="flex justify-between items-start mb-1">
-                                <span class="font-bold text-blue-200">🏗️ Spar & Bygg</span>
-                                <span class="bg-blue-950 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-900">Kost: 20 kr</span>
+                                <span class="font-bold text-amber-200">🌾 Bygg Gård</span>
+                                <span class="bg-amber-950 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-900">Kost: 15 kr</span>
                             </div>
-                            <div class="text-[11px] text-blue-300/80 mb-2">Konverter penger til fabrikker.</div>
-                            <div class="flex gap-2 text-[10px] font-mono border-t border-blue-900/50 pt-2">
-                                <span class="text-green-400">▲ +1 Kapital</span>
+                            <div class="text-[11px] text-amber-300/80 mb-2">Viktig for overlevelse (Fase 1).</div>
+                            <div class="flex gap-2 text-[10px] font-mono border-t border-amber-900/50 pt-2">
+                                <span class="text-green-400">▲ Mat</span>
                                 <span class="text-gray-500">|</span>
-                                <span class="text-green-400">▲ Matprod.</span>
+                                <span class="text-yellow-400">▲ +1 Inntekt</span>
+                            </div>
+                        </button>
+
+                         <!-- BUILD FACTORY (LOCKED INITIALLY) -->
+                        <button onclick="simAction('factory', event)" id="btn-factory" class="w-full mb-3 bg-indigo-900/40 hover:bg-indigo-900/60 border border-indigo-800/50 hover:border-indigo-500 rounded-lg p-3 text-left transition-all group relative overflow-hidden btn-disabled">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-indigo-200">🏭 Bygg Fabrikk</span>
+                                <span class="bg-indigo-950 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-900">Kost: 50 kr</span>
+                            </div>
+                            <div class="text-[11px] text-indigo-300/80 mb-2">Skaper rikdom. Krever Fase 2.</div>
+                            <div class="flex gap-2 text-[10px] font-mono border-t border-indigo-900/50 pt-2">
+                                <span class="text-green-400">▲▲ Score</span>
+                                <span class="text-gray-500">|</span>
+                                <span class="text-yellow-400">▲ +5 Inntekt</span>
+                            </div>
+                            <!-- Lock Overlay -->
+                            <div id="lock-factory" class="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">🔒 Låst (Nå Fase 2)</span>
                             </div>
                         </button>
                         
-                        <!-- PRINT -->
+                        <!-- PRINT MONEY -->
                         <button onclick="simAction('print', event)" id="btn-print" class="w-full mb-3 bg-green-900/40 hover:bg-green-900/60 border border-green-800/50 hover:border-green-500 rounded-lg p-3 text-left transition-all group">
                             <div class="flex justify-between items-start mb-1">
                                 <span class="font-bold text-green-200">🖨️ Trykk Penger</span>
                                 <span class="bg-green-950 text-green-300 text-[10px] font-bold px-2 py-0.5 rounded border border-green-900">Kost: 0 kr</span>
                             </div>
-                            <div class="text-[11px] text-green-300/80 mb-2">Øker statskassen umiddelbart.</div>
+                            <div class="text-[11px] text-green-300/80 mb-2">Raske penger, men farlig.</div>
                             <div class="flex gap-2 text-[10px] font-mono border-t border-green-900/50 pt-2">
                                 <span class="text-green-400">▲ +50 Penger</span>
                                 <span class="text-gray-500">|</span>
                                 <span class="text-red-400">▲ Inflasjon</span>
                             </div>
                         </button>
-
-                         <!-- STIMULATE -->
-                        <button onclick="simAction('stimulate', event)" id="btn-stim" class="w-full mb-3 bg-purple-900/40 hover:bg-purple-900/60 border border-purple-800/50 hover:border-purple-500 rounded-lg p-3 text-left transition-all group">
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="font-bold text-purple-200">🎁 Stimulering</span>
-                                <span class="bg-purple-950 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-900">Kost: 30 kr</span>
-                            </div>
-                            <div class="text-[11px] text-purple-300/80 mb-2">Del ut penger til forbruk.</div>
-                            <div class="flex gap-2 text-[10px] font-mono border-t border-purple-900/50 pt-2">
-                                <span class="text-green-400">▲ Velvilje</span>
-                                <span class="text-gray-500">|</span>
-                                <span class="text-red-400">▼ Matlager</span>
-                            </div>
-                        </button>
-
-                         <!-- PRICE CONTROL -->
-                         <button id="btn-ctrl-price" onclick="togglePriceControl()" class="w-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-slate-400 rounded-lg p-2 flex items-center justify-between transition-all">
-                             <div class="flex flex-col text-left">
-                                 <span class="text-xs font-bold text-gray-300">🛑 Priskontroll</span>
-                                 <span class="text-[10px] text-gray-500">Lås prisene ved høy inflasjon.</span>
-                             </div>
-                             <div id="status-price-ctrl" class="text-[10px] font-bold bg-slate-800 text-gray-500 px-2 py-1 rounded">AV</div>
-                         </button>
 
                     </div>
 
@@ -818,11 +846,10 @@
                 bg.className = `relative flex-1 rounded-xl shadow-sm border border-cyan-100 mb-6 flex items-center justify-center flex-col p-6 transition-colors duration-500 ${d.c}`;
             }
 
-            /* --- 8. SAMFUNNSSIMULATOR (STRATEGISK) --- */
+            /* --- 8. SAMFUNNSSIMULATOR (STRATEGISK REFACTOR) --- */
             let simState = { 
-                pop: 20, food: 100, money: 50, price: 10, inflation: 0, 
-                capital: 1, // Production capacity
-                priceControl: false,
+                pop: 15, food: 80, money: 30, price: 10, inflation: 0, 
+                farms: 2, factories: 0,
                 running: false, paused: false, timer: null, phase: 0 
             };
             
@@ -835,7 +862,7 @@
                      logSim("Simulering gjenopptatt.", "text-white");
                 } else {
                     simState.running = true;
-                    logSim("Simulering startet. (Langsom hastighet)", "text-white");
+                    logSim("Simulering startet.", "text-white");
                     document.getElementById('sim-start-btn').classList.add('hidden');
                     document.getElementById('sim-pause-btn').classList.remove('hidden');
                     document.getElementById('sim-modal').classList.add('hidden');
@@ -868,7 +895,7 @@
             
             window.resetSim = function() {
                 clearInterval(simState.timer);
-                simState = { pop: 20, food: 100, money: 50, price: 10, inflation: 0, capital: 1, priceControl: false, running: false, paused: false, timer: null, phase: 0 };
+                simState = { pop: 15, food: 80, money: 30, price: 10, inflation: 0, farms: 2, factories: 0, running: false, paused: false, timer: null, phase: 0 };
                 updateSimUI();
                 logSim("Reset utført.", "text-gray-400");
                 document.getElementById('sim-start-btn').classList.remove('hidden');
@@ -876,7 +903,6 @@
                 document.getElementById('sim-modal').classList.add('hidden');
                 document.getElementById('sim-city-view').innerHTML = '';
                 document.getElementById('sim-progress').style.width = '0%';
-                togglePriceControlUI();
                 updateButtons();
             }
             
@@ -895,10 +921,15 @@
             }
 
             function simTick() {
-                // 1. Production (Depends on Capital)
-                let production = simState.capital * 5; 
-                if(simState.priceControl) production = production * 0.4; // Shortages
-                simState.food += production;
+                // 1. Production (Farms = Food)
+                // Farms produce food, very little money value initially
+                let foodProd = simState.farms * 6; 
+                simState.food += foodProd;
+                
+                // Passive Income from buildings (Taxes/Trade)
+                // Farms give 1 gold. Factories give 5 gold.
+                let passiveIncome = (simState.farms * 1) + (simState.factories * 5);
+                simState.money += passiveIncome;
 
                 // 2. Consumption
                 const consumption = Math.ceil(simState.pop * 1.5);
@@ -910,38 +941,38 @@
                     simState.pop = Math.floor(simState.pop * 0.9);
                     logSim("KRISE! Folk sulter.", "text-red-400");
                     if(simState.pop <= 5) {
-                        showSimModal("Sultkatastrofe", "Matlagrene er tomme. Priskontroll eller mangel på kapital knakk samfunnet.", "☠️", "text-red-500");
+                        showSimModal("Sultkatastrofe", "Du bygde ikke nok gårder. Folket sultet ihjel.", "☠️", "text-red-500");
                         return;
                     }
-                } else if(simState.food > simState.pop * 5) {
-                    simState.pop += 1; 
+                } else if(simState.food > simState.pop * 6) {
+                    simState.pop += 1; // Healthy growth
                 }
 
                 // 4. Economy & Inflation
-                const productivity = simState.pop + (simState.food / 10);
-                let targetPrice = Math.max(10, (simState.money / productivity) * 5); 
+                // Productivity = Goods (Food) + Capital Value (Factories)
+                const productivity = simState.pop + (simState.food / 10) + (simState.factories * 5);
+                let targetPrice = Math.max(10, (simState.money / productivity) * 8); 
                 
-                if(simState.priceControl) {
-                    if(targetPrice > simState.price) logSim("Mangelvarer! Folk hamstrer.", "text-orange-400");
-                } else {
-                    if(simState.price < targetPrice) simState.price += 1;
-                    if(simState.price > targetPrice) simState.price -= 0.5;
-                }
+                // Market price adjustment
+                if(simState.price < targetPrice) simState.price += 1;
+                if(simState.price > targetPrice) simState.price -= 0.5;
 
                 const basePrice = 10; 
                 simState.inflation = Math.floor(((simState.price - basePrice) / basePrice) * 100);
 
-                if(simState.inflation > 150) {
+                if(simState.inflation > 200) {
                      showSimModal("Hyperinflasjon", "Pengene dine er verdiløse. Samfunnet kollapset.", "💸", "text-red-500");
                      return;
                 }
 
-                // 5. Progress
-                let score = (simState.pop * 2) + (simState.capital * 50);
-                // Inflation penalty
-                if(simState.inflation > 10) score = score / (simState.inflation / 10);
+                // 5. Progress Score
+                // Score comes heavily from FACTORIES (Wealth/Modernity) and Pop size.
+                let score = (simState.pop * 5) + (simState.factories * 150) + (simState.farms * 20);
                 
-                let nextGoal = 100;
+                // Inflation penalty
+                if(simState.inflation > 20) score = score / (simState.inflation / 20);
+                
+                let nextGoal = 500;
                 if(simState.phase === 1) nextGoal = 500;
                 if(simState.phase === 2) nextGoal = 1500;
                 if(simState.phase === 3) nextGoal = 3000;
@@ -952,10 +983,20 @@
                 document.getElementById('sim-progress').style.width = progressPct + '%';
                 document.getElementById('sim-score-display').innerText = Math.floor(score);
                 document.getElementById('sim-next-goal').innerText = nextGoal;
+                document.getElementById('sim-income').innerText = `(+${passiveIncome}/t)`;
                 
-                if(score < 500) { simState.phase = 1; document.getElementById('sim-phase-text').innerText = "Fase 1: Primitiv"; }
-                else if(score < 1500) { simState.phase = 2; document.getElementById('sim-phase-text').innerText = "Fase 2: Vekst"; }
-                else if(score < 3000) { simState.phase = 3; document.getElementById('sim-phase-text').innerText = "Fase 3: Industri"; }
+                // Phase Logic
+                // Start Phase 1. 
+                // Unlock Factories at Phase 2 (Score > 500)
+                if(score < 500) { 
+                    simState.phase = 1; 
+                    document.getElementById('sim-phase-text').innerText = "Fase 1: Jordbrukssamfunn"; 
+                }
+                else if(score < 1500) { 
+                    simState.phase = 2; 
+                    document.getElementById('sim-phase-text').innerText = "Fase 2: Industriell Vekst"; 
+                }
+                else if(score < 3000) { simState.phase = 3; document.getElementById('sim-phase-text').innerText = "Fase 3: Modning"; }
                 else if(score < 5000) { simState.phase = 4; document.getElementById('sim-phase-text').innerText = "Fase 4: Moderne"; }
                 else { simState.phase = 5; document.getElementById('sim-phase-text').innerText = "Fase 5: Fremtid"; }
 
@@ -966,78 +1007,71 @@
 
                 updateSimUI();
             }
-            
-            window.togglePriceControl = function() {
-                if(!simState.running && !simState.paused) return;
-                simState.priceControl = !simState.priceControl;
-                togglePriceControlUI();
-                if(simState.priceControl) logSim("STATEN: Prisene er frosset!", "text-red-300");
-                else logSim("STATEN: Frislipp av priser.", "text-green-300");
-            }
-
-            function togglePriceControlUI() {
-                const btn = document.getElementById('btn-ctrl-price');
-                const status = document.getElementById('status-price-ctrl');
-                if(simState.priceControl) {
-                    btn.classList.add('border-red-500', 'bg-red-900/20');
-                    btn.classList.remove('bg-slate-700/50', 'border-slate-600');
-                    status.innerText = "PÅ";
-                    status.className = "text-[10px] font-bold bg-red-800 text-white px-2 py-1 rounded animate-pulse";
-                } else {
-                    btn.classList.remove('border-red-500', 'bg-red-900/20');
-                    btn.classList.add('bg-slate-700/50', 'border-slate-600');
-                    status.innerText = "AV";
-                    status.className = "text-[10px] font-bold bg-slate-800 text-gray-500 px-2 py-1 rounded";
-                }
-            }
 
             window.simAction = function(type, e) {
                 if(!simState.running) return;
                 
-                if(type === 'invest') {
-                    if(simState.money >= 20) {
-                        simState.money -= 20;
-                        simState.capital += 1;
-                        logSim("Investering: Ny fabrikk åpnet!", "text-blue-300");
-                        if(e) spawnFloatText(e.clientX, e.clientY, "+Kapital", "text-blue-400");
-                    } else logSim("Trenger 20 penger.", "text-gray-500");
+                if(type === 'farm') {
+                    if(simState.money >= 15) {
+                        simState.money -= 15;
+                        simState.farms += 1;
+                        logSim("Ny Gård bygget! Mer mat.", "text-amber-300");
+                        if(e) spawnFloatText(e.clientX, e.clientY, "+Mat", "text-amber-400");
+                    } else logSim("Mangler penger (15 kr).", "text-gray-500");
+                }
+                else if(type === 'factory') {
+                    if(simState.phase < 2) {
+                        logSim("Låst! Må nå Fase 2.", "text-red-500");
+                        return;
+                    }
+                    if(simState.money >= 50) {
+                        simState.money -= 50;
+                        simState.factories += 1;
+                        logSim("Ny Fabrikk! Stor inntekt.", "text-indigo-300");
+                        if(e) spawnFloatText(e.clientX, e.clientY, "+Rikdom", "text-indigo-400");
+                    } else logSim("Mangler penger (50 kr).", "text-gray-500");
                 } 
                 else if(type === 'print') {
                     simState.money += 50;
                     logSim("Sentralbanken: Penger trykket.", "text-green-300");
                     if(e) spawnFloatText(e.clientX, e.clientY, "+$$$", "text-green-400");
                 } 
-                else if(type === 'stimulate') {
-                    if(simState.money >= 30) {
-                        simState.money -= 30;
-                        simState.food -= 20; 
-                        logSim("Stimulering: Folk kjøper mer, men sparer ikke.", "text-purple-300");
-                    } else logSim("Ikke nok penger.", "text-gray-500");
-                }
                 updateSimUI();
             }
             
             function updateButtons() {
-                const invest = document.getElementById('btn-invest');
-                const stim = document.getElementById('btn-stim');
+                const btnFarm = document.getElementById('btn-farm');
+                const btnFactory = document.getElementById('btn-factory');
+                const lockOverlay = document.getElementById('lock-factory');
                 
-                if(simState.money < 20) invest.classList.add('btn-disabled'); else invest.classList.remove('btn-disabled');
-                if(simState.money < 30) stim.classList.add('btn-disabled'); else stim.classList.remove('btn-disabled');
+                // Farm logic
+                if(simState.money < 15) btnFarm.classList.add('btn-disabled'); else btnFarm.classList.remove('btn-disabled');
+
+                // Factory logic (Locked until Phase 2)
+                if(simState.phase < 2) {
+                    btnFactory.classList.add('btn-disabled');
+                    lockOverlay.classList.remove('hidden');
+                } else {
+                    lockOverlay.classList.add('hidden');
+                    if(simState.money < 50) btnFactory.classList.add('btn-disabled'); else btnFactory.classList.remove('btn-disabled');
+                }
             }
 
             function updateSimUI() {
                 // Numbers
                 document.getElementById('sim-pop').innerText = simState.pop;
                 document.getElementById('sim-food').innerText = Math.floor(simState.food);
-                document.getElementById('sim-money').innerText = simState.money;
+                document.getElementById('sim-farms').innerText = simState.farms;
+                document.getElementById('sim-factories').innerText = simState.factories;
+                document.getElementById('sim-money').innerText = Math.floor(simState.money);
                 document.getElementById('sim-price').innerText = Math.floor(simState.price) + " kr";
                 document.getElementById('sim-inflation').innerText = simState.inflation + "%";
-                document.getElementById('sim-capital').innerText = simState.capital;
 
                 // Bars
                 document.getElementById('bar-pop').style.width = Math.min(100, (simState.pop / 200)*100) + '%';
                 document.getElementById('bar-food').style.width = Math.min(100, (simState.food / 500)*100) + '%';
-                document.getElementById('bar-cap').style.width = Math.min(100, (simState.capital / 50)*100) + '%';
+                document.getElementById('bar-farms').style.width = Math.min(100, (simState.farms / 30)*100) + '%';
+                document.getElementById('bar-factories').style.width = Math.min(100, (simState.factories / 20)*100) + '%';
                 
                 const infBar = document.getElementById('bar-inf');
                 const infPct = Math.min(100, simState.inflation);
@@ -1054,31 +1088,33 @@
                 const container = document.getElementById('sim-city-container');
                 
                 // Change background based on Phase
-                if(simState.phase === 1) container.className = "bg-stone-800 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
-                if(simState.phase >= 2) container.className = "bg-amber-900/50 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase === 1) container.className = "bg-amber-900/40 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 2) container.className = "bg-stone-700 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
                 if(simState.phase >= 3) container.className = "bg-slate-700 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
                 if(simState.phase >= 4) container.className = "bg-indigo-900/60 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
                 if(simState.phase >= 5) container.className = "bg-fuchsia-900/60 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
 
-                // Icons based on Phase and Capital (Wealth)
-                let icon = '⛺'; 
-                if(simState.capital > 5) icon = '🏠';
-                if(simState.capital > 15) icon = '🏭';
-                if(simState.capital > 30) icon = '🏢';
-                if(simState.capital > 50) icon = '🏙️';
-                
-                const numIcons = Math.min(60, Math.ceil(simState.pop / 3));
-                
-                if(cityGrid.childElementCount !== numIcons) {
+                // Icons logic: Combine Farms and Factories
+                // Clear grid to rebuild or update smartly. 
+                // For simplicity, we rebuild if counts change.
+                const totalBuildings = simState.farms + simState.factories + Math.ceil(simState.pop/2);
+                if(cityGrid.childElementCount !== totalBuildings) {
                     cityGrid.innerHTML = '';
-                    for(let i=0; i<numIcons; i++) {
-                        const s = document.createElement('div');
-                        s.className = 'sim-item';
-                        s.innerText = icon;
+                    
+                    // Add Farms
+                    for(let i=0; i<simState.farms; i++) {
+                        const s = document.createElement('div'); s.className = 'sim-item'; s.innerText = '🌾'; cityGrid.appendChild(s);
+                    }
+                    // Add Factories
+                    for(let i=0; i<simState.factories; i++) {
+                        const s = document.createElement('div'); s.className = 'sim-item'; s.innerText = '🏭'; cityGrid.appendChild(s);
+                    }
+                    // Add Houses/People
+                    for(let i=0; i<Math.ceil(simState.pop/2); i++) {
+                        const s = document.createElement('div'); s.className = 'sim-item'; 
+                        s.innerText = simState.phase < 2 ? '⛺' : (simState.phase < 4 ? '🏠' : '🏢'); 
                         cityGrid.appendChild(s);
                     }
-                } else if (cityGrid.children.length > 0 && cityGrid.children[0].innerText !== icon) {
-                    Array.from(cityGrid.children).forEach(child => child.innerText = icon);
                 }
             }
             
