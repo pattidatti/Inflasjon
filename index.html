@@ -3,469 +3,1097 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengesystemet og Inflasjon</title>
+    <title>Demografi & Økonomi: Interaktiv Lærebok</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
+            background-color: #f8fafc;
+            scroll-behavior: smooth;
+            padding-top: 110px;
         }
+        
         .card {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             overflow: hidden;
-            margin-bottom: 2rem;
+            margin-bottom: 4rem;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.3s ease;
         }
-        .canvas-container {
-            position: relative;
-            background: #ffffff;
+        
+        /* Navigation styling */
+        .nav-link { 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            padding: 0.5rem 1rem; 
+            border-radius: 9999px; /* Pill shape */
+            white-space: nowrap;
+        }
+        .nav-link:hover { background-color: #e0e7ff; color: #3730a3; transform: translateY(-1px); }
+
+        /* --- Visuals Demografi --- */
+        .pyr-row { display: flex; justify-content: center; height: 14px; margin-bottom: 2px; }
+        .pyr-bar { height: 100%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .pyr-male { background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%); border-radius: 4px 0 0 4px; margin-right: 1px; }
+        .pyr-female { background: linear-gradient(90deg, #f472b6 0%, #ec4899 100%); border-radius: 0 4px 4px 0; margin-left: 1px; }
+
+        /* --- Educational Boxes --- */
+        .austrian-box {
+            background: linear-gradient(to right, #fffbeb, #fff);
+            border-left: 5px solid #d97706;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border-radius: 0 12px 12px 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .austrian-title {
+            font-weight: 800; color: #92400e; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em;
+            margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+
+        .fact-box {
+            background: linear-gradient(to right, #f0f9ff, #fff);
+            border-left: 5px solid #0284c7;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border-radius: 0 12px 12px 0;
+        }
+
+        /* --- Simulator Specifics --- */
+        .sim-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+            gap: 8px;
+            max-height: 350px;
+            overflow-y: auto;
+            perspective: 1000px;
+        }
+        .sim-item {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255,255,255,0.1);
             border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
         }
-        .toggle-btn {
-            transition: all 0.3s ease;
+        .sim-item:hover { transform: scale(1.1) rotate(5deg); background: rgba(255,255,255,0.2); }
+        
+        .sim-log {
+            font-family: 'Courier New', monospace; font-size: 0.85rem;
+            height: 180px; overflow-y: auto;
+            background: #0f172a; color: #34d399;
+            padding: 15px; border-radius: 12px;
+            border: 1px solid #1e293b;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }
-        .toggle-btn.active {
-            background-color: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
+
+        /* Floating Text Animation */
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
         }
-        .slider-thumb::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #3b82f6;
-            cursor: pointer;
-            border-radius: 50%;
+        .floating-text {
+            position: absolute; pointer-events: none;
+            font-weight: bold; font-size: 1.2rem;
+            animation: floatUp 1s ease-out forwards;
+            z-index: 50; text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        /* --- Graf Fix --- */
-        .bar-container {
-            display: flex;
-            align-items: flex-end; /* Juster alt til bunnen */
-            height: 250px;
-            gap: 4px;
-            padding-bottom: 30px; /* Plass til labels */
-            border-bottom: 2px solid #e5e7eb;
-            position: relative;
+
+        /* Status Bars */
+        .status-bar-bg { background: #334155; height: 12px; border-radius: 6px; overflow: hidden; position: relative; }
+        .status-bar-fill { height: 100%; transition: width 0.5s ease, background-color 0.5s ease; }
+        
+        /* Sliders */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%;
+            background: #4f46e5; cursor: pointer; margin-top: -12px; 
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2), 0 4px 6px rgba(0,0,0,0.1);
+            border: 3px solid white; transition: transform 0.1s;
         }
-        .bar-wrapper {
-            flex: 1;
-            height: 100%; /* Viktig: Må fylle høyden for at %-høyde på barnet skal virke */
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end; /* Press søylen ned */
-            align-items: center;
-            position: relative;
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: #e2e8f0; border-radius: 3px;
         }
-        .bar {
-            width: 80%;
-            background: #3b82f6;
-            border-radius: 4px 4px 0 0;
-            transition: height 0.5s ease, background-color 0.3s ease;
-            position: relative;
-        }
-        .bar-label {
-            position: absolute;
-            bottom: -25px;
-            font-size: 0.7rem;
-            color: #6b7280;
-            white-space: nowrap;
-            transform: rotate(-45deg); /* Roter tekst for bedre plass */
-            transform-origin: top left;
-        }
-        .tooltip {
-            position: absolute;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            bottom: 100%;
-            margin-bottom: 4px;
-            display: none;
-            z-index: 10;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-        .bar-wrapper:hover .tooltip {
-            display: block;
-        }
+        
+        @keyframes pulse-danger { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } }
+        .danger-alert { animation: pulse-danger 1.5s infinite; }
+        
+        .btn-disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
     </style>
 </head>
-<body class="p-4 md:p-8 max-w-5xl mx-auto">
+<body class="max-w-6xl mx-auto px-4 pb-40">
 
-    <header class="text-center mb-10">
-        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Pengesystemet og Inflasjon</h1>
-        <p class="text-gray-600">Interaktiv forklaring basert på kapittel om Demografi og Økonomi</p>
-    </header>
-
-    <!-- DEL 1: PENGESYSTEMET -->
-    <section class="card p-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                    <span class="bg-blue-100 text-blue-600 p-2 rounded-lg text-xl">💰</span>
-                    Fra Byttehandel til Penger
-                </h2>
-                <p class="text-gray-600 mt-1 text-sm">Se hvorfor "Naturalhandel" er ineffektivt sammenlignet med et pengesystem.</p>
+    <!-- NAVIGATION -->
+    <nav class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-lg shadow-md z-50 border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-4">
+            <div class="font-black text-xl text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 tracking-tight flex items-center gap-2">
+                <span>🌍</span> Demografi & Økonomi
             </div>
-            <div class="flex bg-gray-100 p-1 rounded-lg mt-4 md:mt-0">
-                <button onclick="setTradeMode('barter')" id="btn-barter" class="toggle-btn active px-4 py-2 rounded-md text-sm font-medium border border-transparent">Naturalhandel</button>
-                <button onclick="setTradeMode('money')" id="btn-money" class="toggle-btn px-4 py-2 rounded-md text-sm font-medium border border-transparent text-gray-600 hover:text-gray-900">Pengesystem</button>
+            <div class="flex overflow-x-auto w-full md:w-auto pb-2 md:pb-0 gap-2 text-xs font-bold text-gray-600 no-scrollbar">
+                <a href="#section-demography" class="nav-link">1. Demografi</a>
+                <a href="#section-malthus" class="nav-link">2. Malthus</a>
+                <a href="#section-money" class="nav-link">3. Penger</a>
+                <a href="#section-rome" class="nav-link">4. Romerriket</a>
+                <a href="#section-bank" class="nav-link">5. Banken</a>
+                <a href="#section-inflation" class="nav-link">6. Inflasjon</a>
+                <a href="#section-rosling" class="nav-link">7. Rikdom</a>
+                <a href="#section-sim" class="nav-link bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 hover:text-white transform hover:scale-105 transition-all">🎮 SIMULATOR</a>
             </div>
         </div>
+    </nav>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2">
-                <div class="canvas-container h-[400px] relative" id="canvas-wrapper">
-                    <canvas id="tradeCanvas"></canvas>
+    <!-- 1. DEMOGRAFI -->
+    <section id="section-demography" class="card border-t-8 border-t-purple-600 scroll-mt-32">
+        <div class="p-6 md:p-10">
+            <div class="mb-8 border-b pb-4">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">1. Den Demografiske Overgangen</h2>
+                <p class="text-gray-600">Hvordan befolkningen endrer seg over tid (PDF s. 2-6).</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <div class="lg:col-span-5 space-y-6">
+                    <div class="bg-gradient-to-br from-purple-50 to-white p-6 rounded-2xl border border-purple-100 shadow-sm">
+                        <label class="block text-sm font-bold text-purple-900 uppercase tracking-wider mb-4">Dra for å endre fase:</label>
+                        <input type="range" id="demo-slider" min="1" max="5" value="1" step="1" oninput="updateDemography()">
+                        <div class="mt-6 transition-all duration-300" id="demo-content">
+                            <h3 class="text-2xl font-bold text-purple-900 mb-2" id="demo-phase-title">Fase 1</h3>
+                            <div class="text-gray-700 leading-relaxed space-y-3" id="demo-phase-desc"></div>
+                        </div>
+                    </div>
+                    <div class="fact-box">
+                        <h4 class="font-bold text-blue-900 mb-2">Befolkningspyramiden</h4>
+                        <p class="text-sm text-gray-700">Pyramiden viser helsetilstanden i et land. En bred bunn betyr mange barn (framtidig arbeidskraft), mens en bred topp betyr en aldrende befolkning som trenger omsorg.</p>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-7 flex flex-col justify-center">
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="bg-green-50 p-3 rounded-xl text-center border border-green-100 shadow-sm"><div class="text-xs font-bold text-green-800 uppercase">Fødsler</div><div class="text-xl font-black text-green-600" id="stat-birth">Høy</div></div>
+                        <div class="bg-red-50 p-3 rounded-xl text-center border border-red-100 shadow-sm"><div class="text-xs font-bold text-red-800 uppercase">Dødsfall</div><div class="text-xl font-black text-red-600" id="stat-death">Høy</div></div>
+                        <div class="bg-blue-50 p-3 rounded-xl text-center border border-blue-100 shadow-sm"><div class="text-xs font-bold text-blue-800 uppercase">Vekst</div><div class="text-xl font-black text-blue-600" id="stat-growth">Lav</div></div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-inner relative h-96">
+                        <div id="pyramid-container" class="w-full h-full flex flex-col-reverse relative items-center justify-end pb-8"></div>
+                        <div class="flex justify-between w-full text-xs font-bold text-gray-400 px-2 md:px-10 border-t border-gray-200 pt-2 absolute bottom-2 left-0 right-0">
+                            <span class="text-blue-500">Menn</span><span class="text-pink-500">Kvinner</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. MALTHUS VS BOSERUP -->
+    <section id="section-malthus" class="card border-t-8 border-t-amber-600 scroll-mt-32">
+        <div class="p-6 md:p-10 bg-gradient-to-b from-amber-50 to-white">
+            <div class="mb-8 border-b pb-4">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">2. Kampen om Ressursene</h2>
+                <p class="text-gray-600">Er det nok til alle? Malthus (Pessimist) vs. Boserup (Optimist).</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div class="relative bg-white border-4 border-amber-900/10 rounded-2xl overflow-hidden shadow-lg h-80">
+                    <div class="absolute inset-x-0 top-0 bg-amber-50 border-b border-amber-100 p-3 flex justify-between z-10">
+                        <div class="font-bold text-amber-900">👥 Befolkning: <span id="malthus-pop" class="text-xl">10</span></div>
+                        <div class="font-bold text-green-700">🌾 Mat til: <span id="malthus-food" class="text-xl">50</span></div>
+                    </div>
+                    <div id="malthus-field" class="p-4 pt-16 h-full overflow-hidden flex flex-wrap content-start gap-1"></div>
+                    <div id="malthus-overlay" class="absolute inset-0 bg-gray-900/95 hidden flex-col items-center justify-center text-white z-20 text-center p-6 backdrop-blur-sm">
+                        <div class="text-6xl mb-4 animate-bounce">💀</div>
+                        <h3 class="text-3xl font-black text-red-500 mb-2 uppercase tracking-widest">KRISE!</h3>
+                        <p class="mb-6 text-gray-300 font-bold">Malthus fikk rett: Befolkningen vokste raskere enn matproduksjonen.</p>
+                        <button onclick="resetMalthus()" class="px-8 py-3 bg-white text-gray-900 font-bold rounded-full hover:scale-105 transition-transform shadow-lg">Prøv Igjen</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col justify-between">
+                    <div class="austrian-box mt-0">
+                        <div class="austrian-title">💡 Markedet løser problemet</div>
+                        <p class="text-sm text-gray-800 mb-2">
+                            I et fritt marked vil <strong>prissignaler</strong> forhindre sult:
+                        </p>
+                        <ol class="list-decimal list-inside text-sm text-gray-800 space-y-1">
+                            <li>Matmangel -> Prisen øker.</li>
+                            <li>Høy pris -> Lønnsomt å finne opp teknologi (traktorer).</li>
+                            <li>Teknologi -> Mer mat (Boserup-effekten).</li>
+                        </ol>
+                    </div>
+                    <button id="btn-innovate" onclick="boserupInnovation(event)" class="mt-6 w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-lg transition-all group relative overflow-hidden">
+                        <div class="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                        <div class="flex items-center justify-center gap-3 relative z-10">
+                            <span class="text-3xl group-hover:scale-125 transition-transform">💡</span>
+                            <div class="text-left">
+                                <div class="font-black text-lg uppercase tracking-wider">Boserup-knappen</div>
+                                <div class="text-xs opacity-90 font-medium">Klikk for å innovere!</div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. PENGESYSTEMET -->
+    <section id="section-money" class="card border-t-8 border-t-blue-600 scroll-mt-32">
+        <div class="p-6 md:p-10">
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">3. Hvorfor bruker vi penger?</h2>
+            <p class="text-gray-600 text-lg mb-8">Penger løser problemet med å bytte varer direkte.</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="bg-gray-900 rounded-2xl p-1 shadow-inner h-[400px] relative">
+                        <canvas id="tradeCanvas" class="rounded-xl w-full h-full bg-white"></canvas>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col justify-center space-y-6">
+                    <div class="space-y-3">
+                        <button onclick="setTradeMode('barter')" id="btn-barter" class="w-full text-left px-6 py-4 rounded-xl border-2 font-bold transition-all bg-white border-blue-600 text-blue-700 shadow-md hover:bg-blue-50">1. Naturalhandel (Ineffektivt)</button>
+                        <button onclick="setTradeMode('money')" id="btn-money" class="w-full text-left px-6 py-4 rounded-xl border-2 font-bold transition-all bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-green-400">2. Pengesystem (Effektivt)</button>
+                    </div>
+                    <div class="austrian-box">
+                        <div class="austrian-title">💡 Penger som målestokk</div>
+                        <p class="text-sm text-gray-800">
+                            Penger er "økonomiens språk". Hvis pengenes verdi er stabil, kan vi beregne priser og bygge solide bedrifter. Hvis pengene mister verdi (inflasjon), blir språket uforståelig, og økonomien fungerer dårligere.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. ROMERRIKET (Split) -->
+    <section id="section-rome" class="card border-t-8 border-t-yellow-600 scroll-mt-32">
+        <div class="p-6 md:p-10">
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">4. Romerriket: Historiens første inflasjon</h2>
+            <p class="text-gray-600 text-lg mb-8">Hva skjer når keiseren "jukser" med pengene?</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <div class="bg-gradient-to-br from-yellow-50 to-white p-6 rounded-2xl border border-yellow-200 shadow-md">
+                        <div class="flex items-center gap-6 mb-8 justify-center">
+                            <div id="roman-coin" class="w-40 h-40 rounded-full flex items-center justify-center text-6xl shadow-2xl transition-all duration-300 border-8 border-yellow-600/20" style="background-color: #FFD700;">🏛️</div>
+                        </div>
+                        
+                        <label class="text-sm font-bold text-gray-700 uppercase mb-2 block tracking-widest text-center">Bland inn billig kobber</label>
+                        <input type="range" id="copper-slider" min="0" max="100" value="0" class="mb-6 w-full" oninput="updateCoin()">
+                        
+                        <div class="text-center bg-white p-4 rounded-xl border border-yellow-100 shadow-inner">
+                            <span class="text-xs font-bold uppercase text-gray-400">Prisvekst (Inflasjon)</span>
+                            <div class="text-4xl font-black text-red-600"><span id="coin-inflation">0</span>%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <h3 class="font-bold text-xl text-yellow-900">Utvanning av valutaen</h3>
+                    <p class="text-gray-700">
+                        Romerske keisere (som Nero) trengte penger til krig og luksusfester. De ville ikke øke skattene direkte, for da ble folket sinte.
+                    </p>
+                    <p class="text-gray-700">
+                        Løsningen? De smeltet om gullmyntene og blandet inn billig kobber. Plutselig hadde de "flere" mynter!
+                    </p>
+                    <div class="austrian-box">
+                        <div class="austrian-title">💡 Østerriksk Perspektiv</div>
+                        <p class="text-sm text-gray-800">
+                            Dette er tyveri. Når staten øker pengemengden uten at det finnes flere varer, stjeler de kjøpekraft fra folket. 
+                            Romerrikets økonomi kollapset fordi ingen stolte på pengene lenger. Handelen stoppet opp, og samfunnet gikk tilbake til byttehandel.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. BANKEN (Split) -->
+    <section id="section-bank" class="card border-t-8 border-t-green-600 scroll-mt-32">
+        <div class="p-6 md:p-10 bg-green-50/30">
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">5. Banken: Penger ut av løse luften</h2>
+            <p class="text-gray-600 text-lg mb-8">Hvordan dagens banksystem (Brøkdelsreserver) skaper konjunkturer.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div class="space-y-6">
+                    <p class="text-gray-700">
+                        En bank trenger ikke ha pengene den låner ut. I "Gullbanc 1600" er du en gullsmed som oppdager at du kan skrive ut flere kvitteringer (sedler) enn du har gull i hvelvet.
+                    </p>
+                    <div class="austrian-box">
+                        <div class="austrian-title">💡 Boom & Bust (Konjunkturer)</div>
+                        <p class="text-sm text-gray-800 mb-2">
+                            Når banker trykker "falske penger" (lån uten dekning), skjer dette:
+                        </p>
+                        <ol class="list-decimal list-inside text-sm text-gray-800 space-y-1">
+                            <li><strong>Boom (Festen):</strong> Det flyter over av billige penger. Bedrifter starter prosjekter som egentlig ikke er lønnsomme. Alle tror de er rike.</li>
+                            <li><strong>Bust (Bakrusen):</strong> Prisene stiger (inflasjon). Det avsløres at det ikke finnes nok ekte ressurser. Prosjektene går konkurs.</li>
+                        </ol>
+                        <p class="text-sm text-gray-800 mt-2 font-bold">Resesjon er markedets måte å rydde opp i feilene fra festen.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-green-200 relative shadow-xl transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                    <h3 class="text-center font-bold text-green-900 mb-4 uppercase tracking-widest">Bank Simulator</h3>
+                    <div class="flex justify-between items-end mb-6 bg-green-50 p-4 rounded-xl border border-green-100">
+                        <div class="text-center"><div class="text-xs font-bold text-gray-400 uppercase">Ekte Gull</div><div class="text-2xl font-bold text-amber-600" id="game-gold">100</div></div>
+                        <div class="text-center"><div class="text-xs font-bold text-gray-400 uppercase">Papirlån</div><div class="text-2xl font-bold text-gray-800" id="game-paper">100</div></div>
+                        <div class="text-center"><div class="text-xs font-bold text-gray-400 uppercase">Tillit</div><div class="text-2xl font-bold text-green-600" id="game-trust">100%</div></div>
+                    </div>
+
+                    <button onclick="gullbancLoan(event)" class="w-full py-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 text-lg">
+                        <span>💸</span> Trykk penger (Start boblen!)
+                    </button>
+                    
+                    <div id="game-over-screen" class="hidden absolute inset-0 bg-gray-900/95 z-20 flex-col items-center justify-center text-white rounded-2xl text-center p-4 backdrop-blur-sm">
+                        <div class="text-6xl mb-4 animate-ping">📉</div>
+                        <h2 class="text-3xl font-black text-red-500 mb-2">BANK RUN!</h2>
+                        <p class="text-sm mb-6">Folket oppdaget at pengene var falske. Boblen sprakk.</p>
+                        <button onclick="resetGullbanc()" class="px-8 py-2 bg-white text-black font-bold rounded-full text-sm hover:bg-gray-200">Start på nytt</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. INFLASJON (Split) -->
+    <section id="section-inflation" class="card border-t-8 border-t-red-600 scroll-mt-32">
+        <div class="p-6 md:p-10">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">6. Inflasjon: Den skjulte skatten</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div class="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-md">
+                    <p class="text-sm text-gray-600 mb-6">
+                        Hvis du legger 1000 kr i madrassen, mister de verdi hvert år fordi staten øker pengemengden.
+                    </p>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Årlig inflasjon: <span id="val-rate" class="text-red-600 text-xl font-black">2.0</span>%</label>
+                    <input type="range" id="input-rate" min="0" max="15" value="2" step="0.5" oninput="updateInflation()">
+                    <div class="mt-8 flex items-end justify-between h-40 gap-1" id="inflation-chart"></div>
+                    <div class="mt-4 text-center bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        Kjøpekraft om 20 år: <span id="res-end" class="font-black text-4xl text-red-600">673</span> kr
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <h3 class="font-bold text-xl text-red-900">Cantillon-effekten: Ulikhet</h3>
+                    <p class="text-gray-700">
+                        Mange tror inflasjon treffer alle likt. Det er feil. Når nye penger trykkes, sprer de seg sakte gjennom systemet som honning.
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm flex gap-3">
+                            <span class="text-2xl">💰</span>
+                            <div>
+                                <strong>1. Vinnerne (Først til mølla):</strong> Staten, banker og store investorer får de nye pengene først. De kan kjøpe aksjer og eiendom til <em>gamle, lave priser</em>.
+                            </div>
+                        </li>
+                        <li class="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm flex gap-3">
+                            <span class="text-2xl">💸</span>
+                            <div>
+                                <strong>2. Taperne (Sist i køen):</strong> Vanlige lønnsmottakere, trygdede og sparere. Når pengene endelig når dem (som lønn), har prisene på mat og strøm allerede steget.
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="austrian-box">
+                        <div class="austrian-title">💡 Inflasjon øker forskjellene</div>
+                        <p class="text-sm text-gray-800">
+                            Inflasjon er en overføring av rikdom fra de fattige (som har kontanter) til de rike (som har gjeld og eiendeler). Det er en skjult skatt som ikke vedtas i Stortinget.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. ROSLING (Split) -->
+    <section id="section-rosling" class="card border-t-8 border-t-cyan-600 scroll-mt-32">
+        <div class="p-6 md:p-10 bg-gradient-to-br from-cyan-50 to-white">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">7. Hans Rosling & Veien til Rikdom</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <p class="text-gray-700">
+                        PDF-en (s. 66) lister opp kravene for at et land skal bli rikt. Ett av de viktigste punktene er <strong>"En stabil valuta"</strong>.
+                    </p>
+                    <h3 class="font-bold text-lg text-cyan-900">Hvorfor er stabil valuta viktig?</h3>
+                    <p class="text-gray-700">
+                        For å klatre på rikdomsstigen (fra sko til sykkel til bil), må du kunne <strong>spare</strong>. Sparing er å ofre forbruk i dag for å få det bedre i morgen.
+                    </p>
+                    <div class="austrian-box">
+                        <div class="austrian-title">💡 Inflasjon knekker stigen</div>
+                        <p class="text-sm text-gray-800">
+                            Hvis penger mister verdi raskt (høy inflasjon), er det umulig å spare til en sykkel eller en utdanning. Pengene dine "råtner" i lomma. 
+                            Folk slutter å spare og bruker alt med en gang. Uten sparing finnes det ingen penger til å bygge fabrikker eller kjøpe maskiner. Da stopper utviklingen opp, og folk blir sittende fast i fattigdom.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-cyan-100 flex flex-col justify-between h-full shadow-lg">
+                    <div class="relative flex-1 bg-cyan-50 rounded-xl mb-6 flex items-center justify-center flex-col p-6 transition-colors duration-500 overflow-hidden" id="rosling-bg">
+                        <!-- Animated background elements could go here -->
+                        <div class="text-9xl transition-transform duration-500 transform hover:scale-110 drop-shadow-md" id="rosling-icon">🦶</div>
+                        <h4 class="text-3xl font-black text-gray-800 mt-6" id="rosling-title">Fattigdom</h4>
+                        <p class="text-center text-gray-500 text-sm mt-2 px-4 italic" id="rosling-desc">Målet er å få råd til sko.</p>
+                    </div>
+
+                    <input type="range" min="1" max="4" value="1" step="1" id="wealth-slider" class="mb-4" oninput="updateRosling()">
+                    <div class="flex justify-between text-xs font-bold text-cyan-700 uppercase tracking-wider">
+                        <span>1. Sko</span>
+                        <span>2. Sykkel</span>
+                        <span>3. Motor</span>
+                        <span>4. Bil/Fly</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. MASTER SIMULATOR -->
+    <section id="section-sim" class="card border-t-8 border-t-indigo-600 scroll-mt-32">
+        <div class="p-6 md:p-10 bg-slate-900 text-white relative overflow-hidden">
+            <!-- Background Decoration -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+            <div class="absolute -bottom-8 -left-8 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+
+            <!-- Header -->
+            <div class="mb-6 border-b border-gray-700 pb-4 flex flex-col md:flex-row justify-between items-start gap-4 relative z-10">
+                <div>
+                    <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-2">Samfunnssimulatoren</h2>
+                    <p class="text-gray-400 text-sm">Strategi: Bygg <strong>Kapital</strong> for å øke produksjon. Unngå <strong>Inflasjon</strong> for å bevare poengsummen.</p>
+                </div>
+                <div class="text-right flex gap-3">
+                    <button onclick="startSim()" id="sim-start-btn" class="px-6 py-2 bg-green-600 hover:bg-green-500 rounded-lg font-bold shadow-lg transition-all transform hover:scale-105 flex items-center gap-2">
+                        <span>▶️</span> START
+                    </button>
+                    <button onclick="resetSim()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold shadow-lg transition-all text-sm">
+                        🔄 Reset
+                    </button>
+                    <button onclick="togglePause()" id="sim-pause-btn" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg font-bold shadow-lg transition-all text-sm hidden">
+                        ⏸️ Pause
+                    </button>
                 </div>
             </div>
             
-            <div class="bg-blue-50 p-6 rounded-xl border border-blue-100">
-                <h3 class="font-bold text-blue-900 mb-3 text-lg" id="info-title">Problemet med Naturalhandel</h3>
-                <div id="info-content" class="text-blue-800 text-sm space-y-4">
-                    <p>I PDF-en (s. 32) møter vi <strong>Eggebonden</strong> som vil ha sko.</p>
-                    <ul class="list-disc pl-4 space-y-2">
-                        <li>Skomakeren vil ikke ha egg, men ost.</li>
-                        <li>Ostebonden vil ikke ha egg, men melk.</li>
-                        <li>Melkebonden vil ikke ha egg, men hvete.</li>
-                    </ul>
-                    <p class="font-semibold mt-4 border-t border-blue-200 pt-3">Konklusjon:</p>
-                    <p>Eggebonden må gjennomføre <strong>4 bytter</strong> bare for å få seg ett par sko! Dette er svært ineffektivt.</p>
+            <!-- PROGRESS BAR & PHASE -->
+            <div class="mb-8 relative z-10 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                <div class="flex justify-between items-end mb-2">
+                    <div>
+                        <span class="text-xs text-gray-400 uppercase font-bold block mb-1">Nåværende Fase</span>
+                        <span id="sim-phase-text" class="text-2xl font-black text-white">Fase 1: Primitiv</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-gray-400 uppercase font-bold block mb-1">Score / Neste Mål</span>
+                        <div class="text-xl font-mono"><span id="sim-score-display" class="text-blue-400">0</span> / <span id="sim-next-goal" class="text-gray-500">100</span></div>
+                    </div>
+                </div>
+                <div class="w-full bg-gray-900 rounded-full h-6 overflow-hidden border border-gray-600 relative">
+                    <!-- Target Marker line -->
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-white z-20 opacity-50" style="left: 20%"></div>
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-white z-20 opacity-50" style="left: 40%"></div>
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-white z-20 opacity-50" style="left: 60%"></div>
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-white z-20 opacity-50" style="left: 80%"></div>
+                    
+                    <div id="sim-progress" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full w-0 transition-all duration-1000 relative">
+                        <div class="absolute right-0 top-0 bottom-0 w-1 bg-white animate-pulse"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-[10px] text-gray-500 mt-1 uppercase font-bold px-1">
+                    <span>Start</span>
+                    <span>Vekst</span>
+                    <span>Industri</span>
+                    <span>Moderne</span>
+                    <span>Fremtid</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
+                
+                <!-- LEFT COLUMN: CITY & STATS (7 cols) -->
+                <div class="lg:col-span-7 space-y-4">
+                    <!-- City View -->
+                    <div id="sim-city-container" class="bg-stone-900 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000">
+                        <div class="absolute top-2 right-4 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Din Sivilisasjon</div>
+                        <div id="sim-city-view" class="sim-grid p-2"></div>
+                        
+                        <!-- Modal Overlay -->
+                        <div id="sim-modal" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-center hidden p-8 z-50 backdrop-blur-md">
+                            <div id="sim-modal-icon" class="text-6xl mb-4 animate-bounce"></div>
+                            <h3 id="sim-modal-title" class="text-2xl font-black text-white mb-2 uppercase"></h3>
+                            <p id="sim-modal-desc" class="text-sm text-gray-300 mb-6 max-w-md leading-relaxed"></p>
+                            <button onclick="resetSim()" class="px-6 py-2 bg-white text-black font-bold rounded-full hover:bg-indigo-50 text-sm">Start på nytt</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <!-- Pop -->
+                        <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
+                            <div class="text-[10px] text-blue-400 font-bold uppercase mb-1">Befolkning</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-pop">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-blue-900"><div id="bar-pop" class="h-full bg-blue-500" style="width: 0%"></div></div>
+                        </div>
+                        <!-- Food -->
+                        <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
+                            <div class="text-[10px] text-green-400 font-bold uppercase mb-1">Matlager</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-food">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-green-900"><div id="bar-food" class="h-full bg-green-500" style="width: 0%"></div></div>
+                        </div>
+                        <!-- Capital -->
+                        <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
+                            <div class="text-[10px] text-yellow-400 font-bold uppercase mb-1">Realkapital 🏭</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-capital">0</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-yellow-900"><div id="bar-cap" class="h-full bg-yellow-500" style="width: 0%"></div></div>
+                        </div>
+                        <!-- Inflation -->
+                        <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 relative overflow-hidden group">
+                            <div class="text-[10px] text-red-400 font-bold uppercase mb-1">Inflasjon 🔥</div>
+                            <div class="text-xl text-white font-mono font-bold" id="sim-inflation">0%</div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-red-900"><div id="bar-inf" class="h-full bg-red-500" style="width: 0%"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Market Info -->
+                    <div class="flex justify-between items-center bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-700 text-xs font-mono">
+                         <div class="flex items-center gap-2">
+                             <span>💵 Kasse:</span>
+                             <span id="sim-money" class="text-yellow-400 font-bold text-sm">0</span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                             <span>🏷️ Pris (Brød):</span>
+                             <span id="sim-price" class="text-gray-300 font-bold">10 kr</span>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: CONTROLS (5 cols) -->
+                <div class="lg:col-span-5 space-y-4">
+                    
+                    <!-- Action Cards -->
+                    <div class="bg-slate-800 p-4 rounded-xl border border-gray-700 shadow-xl">
+                        <h4 class="font-bold text-gray-400 mb-4 border-b border-gray-600 pb-2 uppercase text-[10px] tracking-widest">Dine Valg (Strategi)</h4>
+                        
+                        <!-- INVEST -->
+                        <button onclick="simAction('invest', event)" id="btn-invest" class="w-full mb-3 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800/50 hover:border-blue-500 rounded-lg p-3 text-left transition-all group relative overflow-hidden">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-blue-200">🏗️ Spar & Bygg</span>
+                                <span class="bg-blue-950 text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-900">Kost: 20 kr</span>
+                            </div>
+                            <div class="text-[11px] text-blue-300/80 mb-2">Konverter penger til fabrikker.</div>
+                            <div class="flex gap-2 text-[10px] font-mono border-t border-blue-900/50 pt-2">
+                                <span class="text-green-400">▲ +1 Kapital</span>
+                                <span class="text-gray-500">|</span>
+                                <span class="text-green-400">▲ Matprod.</span>
+                            </div>
+                        </button>
+                        
+                        <!-- PRINT -->
+                        <button onclick="simAction('print', event)" id="btn-print" class="w-full mb-3 bg-green-900/40 hover:bg-green-900/60 border border-green-800/50 hover:border-green-500 rounded-lg p-3 text-left transition-all group">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-green-200">🖨️ Trykk Penger</span>
+                                <span class="bg-green-950 text-green-300 text-[10px] font-bold px-2 py-0.5 rounded border border-green-900">Kost: 0 kr</span>
+                            </div>
+                            <div class="text-[11px] text-green-300/80 mb-2">Øker statskassen umiddelbart.</div>
+                            <div class="flex gap-2 text-[10px] font-mono border-t border-green-900/50 pt-2">
+                                <span class="text-green-400">▲ +50 Penger</span>
+                                <span class="text-gray-500">|</span>
+                                <span class="text-red-400">▲ Inflasjon</span>
+                            </div>
+                        </button>
+
+                         <!-- STIMULATE -->
+                        <button onclick="simAction('stimulate', event)" id="btn-stim" class="w-full mb-3 bg-purple-900/40 hover:bg-purple-900/60 border border-purple-800/50 hover:border-purple-500 rounded-lg p-3 text-left transition-all group">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-purple-200">🎁 Stimulering</span>
+                                <span class="bg-purple-950 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-900">Kost: 30 kr</span>
+                            </div>
+                            <div class="text-[11px] text-purple-300/80 mb-2">Del ut penger til forbruk.</div>
+                            <div class="flex gap-2 text-[10px] font-mono border-t border-purple-900/50 pt-2">
+                                <span class="text-green-400">▲ Velvilje</span>
+                                <span class="text-gray-500">|</span>
+                                <span class="text-red-400">▼ Matlager</span>
+                            </div>
+                        </button>
+
+                         <!-- PRICE CONTROL -->
+                         <button id="btn-ctrl-price" onclick="togglePriceControl()" class="w-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-slate-400 rounded-lg p-2 flex items-center justify-between transition-all">
+                             <div class="flex flex-col text-left">
+                                 <span class="text-xs font-bold text-gray-300">🛑 Priskontroll</span>
+                                 <span class="text-[10px] text-gray-500">Lås prisene ved høy inflasjon.</span>
+                             </div>
+                             <div id="status-price-ctrl" class="text-[10px] font-bold bg-slate-800 text-gray-500 px-2 py-1 rounded">AV</div>
+                         </button>
+
+                    </div>
+
+                    <!-- Log -->
+                    <div id="sim-log" class="sim-log border border-slate-700/50">
+                        <div class="text-gray-400 italic">> Klar for simulering.</div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- DEL 2: INFLASJON -->
-    <section class="card p-6">
-        <div class="mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <span class="bg-red-100 text-red-600 p-2 rounded-lg text-xl">📈</span>
-                Hva er Inflasjon?
-            </h2>
-            <p class="text-gray-600 mt-1">Inflasjon er en økning i pengemengden som gjør at pengene mister verdi over tid (s. 36).</p>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Controls -->
-            <div class="lg:col-span-4 space-y-6 bg-gray-50 p-6 rounded-xl border border-gray-100">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Startbeløp (i madrassen)</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-gray-500">kr</span>
-                        <input type="number" id="input-amount" value="1000" class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" oninput="updateInflation()">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Antall år frem i tid: <span id="val-years" class="text-blue-600 font-bold">20</span> år</label>
-                    <input type="range" id="input-years" min="5" max="50" value="20" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb" oninput="updateInflation()">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Årlig inflasjon: <span id="val-rate" class="text-blue-600 font-bold">2.0</span>%</label>
-                    <input type="range" id="input-rate" min="0" max="15" value="2" step="0.5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-thumb" oninput="updateInflation()">
-                    <div class="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>0%</span>
-                        <span class="text-green-600 font-semibold cursor-pointer hover:underline" onclick="setRate(2)">Norges Bank Mål (2%)</span>
-                        <span>15%</span>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                    <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Resultat</h4>
-                    <p class="text-sm text-gray-600">Om <span id="res-years">20</span> år vil dine <span id="res-start">1000</span> kr ha en kjøpekraft tilsvarende:</p>
-                    <p class="text-3xl font-bold text-gray-800 mt-1"><span id="res-end">673</span> kr</p>
-                    <p class="text-xs text-red-500 mt-2 flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
-                        Verditap: <span id="res-loss">327</span> kr
-                    </p>
-                </div>
-            </div>
-
-            <!-- Visualization -->
-            <div class="lg:col-span-8 flex flex-col justify-end">
-                <div class="bg-white p-4 rounded-xl">
-                    <h3 class="text-center font-medium text-gray-500 mb-8">Utvikling av kjøpekraft over tid</h3>
-                    <div id="inflation-chart" class="bar-container px-4">
-                        <!-- Bars injected by JS -->
-                    </div>
-                    <div class="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-100 text-sm text-yellow-800">
-                        <strong>Fra læreboken (s. 38):</strong> "Inflasjon gjør det vanskeligere å spare, men belønner dem som tar opp lån."
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- DEL 3: ØSTERRIKSK ØKONOMI -->
-    <section class="card p-8 bg-amber-50 border border-amber-100">
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold text-amber-900 flex items-center gap-2">
-                <span class="bg-amber-200 text-amber-800 p-2 rounded-lg text-xl">🏛️</span>
-                Det Østerrikske Perspektivet
-            </h2>
-            <p class="text-amber-800 mt-2">I den "østerrikske skolen" (en retning innen økonomi) ser man på inflasjon og penger litt annerledes enn i dagens skolebøker.</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <!-- Kolonne 1 -->
-            <div class="space-y-6">
-                <div class="bg-white p-5 rounded-lg shadow-sm border border-amber-100">
-                    <h3 class="font-bold text-lg text-amber-900 mb-2">1. Inflasjon er ikke prisvekst</h3>
-                    <p class="text-sm text-gray-700">
-                        I dag sier vi at inflasjon er når prisene stiger. Østerrikerne mener dette er feil. De sier at <strong>inflasjon er når man øker pengemengden</strong> (trykker mer penger). <br><br>
-                        Prisvekst er bare et <em>symptom</em> på at det finnes flere penger som jager de samme varene.
-                    </p>
-                </div>
-
-                <div class="bg-white p-5 rounded-lg shadow-sm border border-amber-100">
-                    <h3 class="font-bold text-lg text-amber-900 mb-2">2. Cantillon-effekten (Urettferdighet)</h3>
-                    <p class="text-sm text-gray-700">
-                        Når nye penger lages, blir de ikke delt ut likt til alle samtidig.
-                    </p>
-                    <ul class="list-disc pl-4 mt-2 text-sm text-gray-700 space-y-1">
-                        <li><strong>Vinnerne:</strong> De som får de nye pengene først (ofte staten, banker og store investorer). De kan kjøpe varer til <em>gamle, lave priser</em>.</li>
-                        <li><strong>Taperne:</strong> Vanlige folk (lønnsmottakere og pensjonister) får pengene sist. Når pengene når dem, har prisene i butikken allerede steget.</li>
-                    </ul>
-                    <p class="text-xs text-amber-700 mt-2 italic">Dette fungerer som en skjult skatt fra de fattige til de rike.</p>
-                </div>
-            </div>
-
-            <!-- Kolonne 2 -->
-            <div class="space-y-6">
-                <div class="bg-white p-5 rounded-lg shadow-sm border border-amber-100">
-                    <h3 class="font-bold text-lg text-amber-900 mb-2">3. Pengers tidsreise (Regresjonsteoremet)</h3>
-                    <p class="text-sm text-gray-700 mb-3">
-                        Hvorfor har en papirlapp verdi? Ludwig von Mises forklarte dette med sin <em>Regresjonsanalyse</em>:
-                    </p>
-                    <div class="relative pl-6 border-l-4 border-amber-300 space-y-3">
-                        <div>
-                            <span class="text-xs font-bold uppercase text-amber-600">I dag</span>
-                            <p class="text-sm text-gray-600">Penger har verdi fordi de hadde kjøpekraft i går.</p>
-                        </div>
-                        <div>
-                            <span class="text-xs font-bold uppercase text-amber-600">I går</span>
-                            <p class="text-sm text-gray-600">De hadde verdi i går fordi de hadde verdi dagen før.</p>
-                        </div>
-                        <div>
-                            <span class="text-xs font-bold uppercase text-amber-600">Opprinnelsen</span>
-                            <p class="text-sm text-gray-600">
-                                Hvis vi går langt nok tilbake, må pengene ha startet som en <strong>vare</strong> (som gull eller sølv) som folk ønsket seg <em>før</em> det ble penger.
-                            </p>
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-700 mt-4">
-                        <strong>Konklusjon:</strong> Staten kan ikke bare vedta at noe har verdi. Ekte penger må ha oppstått frivillig i markedet fordi varen var verdifull i seg selv. Når vi forlater denne koblingen (f.eks. går vekk fra gullstandarden), risikerer vi at pengene mister all verdi over tid.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
+    <!-- JS LOGIC -->
     <script>
-        /* =========================================
-           DEL 1: CANVAS HANDEL VISUALISERING
-           ========================================= */
-        const canvas = document.getElementById('tradeCanvas');
-        const ctx = canvas.getContext('2d');
-        let mode = 'barter';
-        
-        const nodes = [
-            { id: 'egg', label: 'Eggebonde', icon: '🥚', color: '#FEF3C7', border: '#D97706' },
-            { id: 'hvete', label: 'Hvetebonde', icon: '🌾', color: '#DCFCE7', border: '#16A34A' },
-            { id: 'melk', label: 'Melkebonde', icon: '🥛', color: '#DBEAFE', border: '#2563EB' },
-            { id: 'ost', label: 'Ostebonde', icon: '🧀', color: '#FFEDD5', border: '#EA580C' },
-            { id: 'sko', label: 'Skomaker', icon: '👞', color: '#F3E8FF', border: '#9333EA' }
-        ];
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- Helper: Float Text ---
+            window.spawnFloatText = function(x, y, text, colorClass) {
+                const el = document.createElement('div');
+                el.className = `floating-text ${colorClass}`;
+                el.innerText = text;
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 1000);
+            }
 
-        const moneyNode = { id: 'money', label: 'PENGER', icon: '💰', color: '#FFD700', border: '#B45309' };
-        let packets = []; 
+            /* --- DEMOGRAPHY --- */
+            const demoData = {
+                1: { t: "Fase 1: Det Førmoderne Samfunn", d: "<strong>Hvorfor?</strong> Man trenger mange barn til å jobbe, og mange dør. Befolkningen står stille.", b: "Høy", de: "Høy", g: "Lav", sh: "concave" },
+                2: { t: "Fase 2: Eksplosjonen", d: "<strong>Hvorfor?</strong> Hygiene og mat blir bedre. Dødsraten faller, men tradisjoner holder fødslene høye.", b: "Høy", de: "Faller", g: "Maksimal", sh: "triangle" },
+                3: { t: "Fase 3: Modning", d: "<strong>Hvorfor?</strong> Kvinner tar utdanning, barn blir en kostnad heller enn inntekt. Færre barn.", b: "Faller", de: "Lav", g: "Avtar", sh: "bell" },
+                4: { t: "Fase 4: Stagnasjon", d: "<strong>Hvorfor?</strong> Moderne samfunn. Folk lever lenge, men får få barn.", b: "Lav", de: "Lav", g: "Stabil", sh: "beehive" },
+                5: { t: "Fase 5: Eldrebølgen", d: "<strong>Hvorfor?</strong> Svært lave fødselsrater. Få unge må forsørge mange gamle. Økonomisk utfordring.", b: "Veldig lav", de: "Øker litt", g: "Negativ", sh: "urn" }
+            };
 
-        function resizeCanvas() {
-            const container = document.getElementById('canvas-wrapper');
-            canvas.width = container.offsetWidth;
-            canvas.height = container.offsetHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+            window.updateDemography = function() {
+                const val = document.getElementById('demo-slider').value;
+                const d = demoData[val];
+                document.getElementById('demo-phase-title').innerText = d.t;
+                document.getElementById('demo-phase-desc').innerHTML = d.d;
+                document.getElementById('stat-birth').innerText = d.b;
+                document.getElementById('stat-death').innerText = d.de;
+                document.getElementById('stat-growth').innerText = d.g;
+                renderPyramid(d.sh);
+            }
 
-        function getNodePositions() {
-            const cx = canvas.width / 2;
-            const cy = canvas.height / 2;
-            const radius = Math.min(cx, cy) - 60;
-            return nodes.map((node, i) => {
-                const angle = (i * 2 * Math.PI / nodes.length) - (Math.PI / 2);
-                return { ...node, x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
-            });
-        }
-
-        function drawArrow(fromX, fromY, toX, toY, color) {
-            const headLength = 10;
-            const dx = toX - fromX;
-            const dy = toY - fromY;
-            const angle = Math.atan2(dy, dx);
-            const padding = 45;
-            const startX = fromX + Math.cos(angle) * padding;
-            const startY = fromY + Math.sin(angle) * padding;
-            const endX = toX - Math.cos(angle) * padding;
-            const endY = toY - Math.sin(angle) * padding;
-
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(endX, endY);
-            ctx.lineTo(endX - headLength * Math.cos(angle - Math.PI / 6), endY - headLength * Math.sin(angle - Math.PI / 6));
-            ctx.lineTo(endX - headLength * Math.cos(angle + Math.PI / 6), endY - headLength * Math.sin(angle + Math.PI / 6));
-            ctx.fillStyle = color;
-            ctx.fill();
-        }
-
-        function drawNode(node) {
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, 35, 0, 2 * Math.PI);
-            ctx.fillStyle = node.color;
-            ctx.fill();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = node.border;
-            ctx.stroke();
-            ctx.font = '24px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#000';
-            ctx.fillText(node.icon, node.x, node.y);
-            ctx.font = 'bold 12px sans-serif';
-            ctx.fillStyle = '#374151';
-            ctx.fillText(node.label, node.x, node.y + 50);
-        }
-
-        function spawnPacket(startNode, endNode, color) {
-            packets.push({ x: startNode.x, y: startNode.y, targetX: endNode.x, targetY: endNode.y, color: color, progress: 0, speed: 0.02 });
-        }
-
-        function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const positionedNodes = getNodePositions();
-            const centerNode = { ...moneyNode, x: canvas.width/2, y: canvas.height/2 };
-
-            if (mode === 'barter') {
-                for (let i = 0; i < positionedNodes.length; i++) {
-                    const current = positionedNodes[i];
-                    const next = positionedNodes[(i + 1) % positionedNodes.length];
-                    drawArrow(current.x, current.y, next.x, next.y, '#9CA3AF');
+            function renderPyramid(shape) {
+                const c = document.getElementById('pyramid-container');
+                c.innerHTML = '';
+                for(let i=0; i<20; i++) {
+                    let w = 0;
+                    if(shape=='concave') w = 1 - Math.pow(i/20, 0.4); 
+                    if(shape=='triangle') w = 1 - (i/20);
+                    if(shape=='bell') w = 1 - Math.pow(i/20, 2.5);
+                    if(shape=='beehive') w = i>14 ? 1-((i-14)/6) : 0.85;
+                    if(shape=='urn') w = i<5 ? 0.6+(i*0.05) : (i>14 ? 1-((i-14)/6) : 0.9);
+                    const width = Math.max(5, Math.floor(w * 45));
+                    const row = document.createElement('div');
+                    row.className = 'pyr-row w-full';
+                    row.innerHTML = `<div class="pyr-bar pyr-male" style="width:${width}%"></div><div class="pyr-bar pyr-female" style="width:${width}%"></div>`;
+                    c.appendChild(row);
                 }
-            } else {
-                drawNode(centerNode);
-                positionedNodes.forEach(node => {
-                    drawArrow(node.x, node.y, centerNode.x, centerNode.y, '#10B981');
+            }
+
+            /* --- MALTHUS --- */
+            let mPop = 10, mFood = 50, mTimer = null;
+            window.startMalthus = function() {
+                if(mTimer) clearInterval(mTimer);
+                mTimer = setInterval(() => {
+                    mPop = Math.floor(mPop * 1.08) + 1; 
+                    if(mPop > mFood) {
+                        clearInterval(mTimer);
+                        document.getElementById('malthus-overlay').classList.remove('hidden');
+                        document.getElementById('malthus-overlay').classList.add('flex');
+                    } else { updateMalthusUI(); }
+                }, 1000);
+            }
+            window.boserupInnovation = function(e) { 
+                mFood += 60; 
+                updateMalthusUI();
+                if(e) spawnFloatText(e.clientX, e.clientY, "+Mat!", "text-green-600");
+            }
+            window.resetMalthus = function() {
+                mPop=10; mFood=50; document.getElementById('malthus-overlay').classList.add('hidden');
+                document.getElementById('malthus-overlay').classList.remove('flex'); startMalthus();
+            }
+            function updateMalthusUI() {
+                document.getElementById('malthus-pop').innerText = mPop;
+                document.getElementById('malthus-food').innerText = mFood;
+                const field = document.getElementById('malthus-field');
+                const icons = Math.min(150, Math.ceil(mPop/3));
+                if(field.childElementCount !== icons) {
+                    field.innerHTML = '';
+                    for(let i=0; i<icons; i++) {
+                        const s = document.createElement('span'); s.className = 'pop-icon text-xs'; s.innerText = '👤'; field.appendChild(s);
+                    }
+                }
+            }
+
+            /* --- TRADE --- */
+            const canvas = document.getElementById('tradeCanvas');
+            const ctx = canvas.getContext('2d');
+            let tradeMode = 'barter';
+            const nodes = [{ id: 'egg', label: 'Egg', color:'#FEF3C7' }, { id: 'hvete', label: 'Hvete', color:'#DCFCE7' }, { id: 'melk', label: 'Melk', color:'#DBEAFE' }, { id: 'ost', label: 'Ost', color:'#FFEDD5' }, { id: 'sko', label: 'Sko', color:'#F3E8FF' }];
+            
+            function resizeCanvas() {
+                const parent = canvas.parentElement; canvas.width = parent.clientWidth; canvas.height = parent.clientHeight;
+                if(canvas.width===0) setTimeout(resizeCanvas, 100);
+            }
+            window.addEventListener('resize', resizeCanvas);
+            
+            function drawTrade() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                const cx = canvas.width/2, cy = canvas.height/2; const r = Math.min(cx,cy) - 60;
+                nodes.forEach((n,i) => {
+                    const a = (i*2*Math.PI/nodes.length) - Math.PI/2; n.x = cx + Math.cos(a)*r; n.y = cy + Math.sin(a)*r;
                 });
-            }
-
-            positionedNodes.forEach(drawNode);
-
-            packets.forEach((pkt, index) => {
-                pkt.progress += pkt.speed;
-                const curX = pkt.x + (pkt.targetX - pkt.x) * pkt.progress;
-                const curY = pkt.y + (pkt.targetY - pkt.y) * pkt.progress;
-                ctx.beginPath(); ctx.arc(curX, curY, 6, 0, 2*Math.PI); ctx.fillStyle = pkt.color; ctx.fill();
-                if(pkt.progress >= 1) packets.splice(index, 1);
-            });
-
-            if (Math.random() < 0.03) {
-                if (mode === 'barter') {
-                    const idx = Math.floor(Math.random() * positionedNodes.length);
-                    spawnPacket(positionedNodes[idx], positionedNodes[(idx + 1) % positionedNodes.length], '#EF4444');
+                if(tradeMode === 'barter') {
+                    ctx.beginPath();
+                    for(let i=0; i<nodes.length; i++) { let next = nodes[(i+1)%nodes.length]; ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(next.x, next.y); }
+                    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 3; ctx.stroke();
                 } else {
-                    const idx = Math.floor(Math.random() * positionedNodes.length);
-                    if (Math.random() > 0.5) spawnPacket(positionedNodes[idx], centerNode, '#3B82F6');
-                    else spawnPacket(centerNode, positionedNodes[idx], '#F59E0B');
+                    nodes.forEach(n => { ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(cx, cy); ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 4; ctx.stroke(); });
+                    ctx.beginPath(); ctx.arc(cx, cy, 35, 0, 2*Math.PI); ctx.fillStyle = '#f59e0b'; ctx.fill(); ctx.fillStyle = 'white'; ctx.font='30px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('$', cx, cy);
+                }
+                nodes.forEach(n => {
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 30, 0, 2*Math.PI); ctx.fillStyle = n.color; ctx.fill(); 
+                    ctx.strokeStyle = 'white'; ctx.lineWidth = 4; ctx.stroke();
+                    ctx.fillStyle = '#1e293b'; ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(n.label, n.x, n.y);
+                });
+                requestAnimationFrame(drawTrade);
+            }
+            window.setTradeMode = function(m) { tradeMode = m; const btnB = document.getElementById('btn-barter'); const btnM = document.getElementById('btn-money');
+                if(m==='barter') {
+                    btnB.className = "w-full text-left px-6 py-4 rounded-xl border-2 font-bold transition-all bg-white border-blue-600 text-blue-700 shadow-md hover:bg-blue-50";
+                    btnM.className = "w-full text-left px-6 py-4 rounded-xl border-2 font-bold transition-all bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100";
+                } else {
+                    btnB.className = "w-full text-left px-6 py-4 rounded-xl border-2 font-bold transition-all bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100";
+                    btnM.className = "w-full text-left px-6 py-4 rounded-xl border-2 font-bold transition-all bg-white border-green-600 text-green-700 shadow-md";
                 }
             }
-            requestAnimationFrame(render);
-        }
 
-        function setTradeMode(newMode) {
-            mode = newMode;
-            packets = [];
-            document.getElementById('btn-barter').className = `toggle-btn px-4 py-2 rounded-md text-sm font-medium border border-transparent ${mode === 'barter' ? 'active shadow-sm' : 'text-gray-600 hover:text-gray-900'}`;
-            document.getElementById('btn-money').className = `toggle-btn px-4 py-2 rounded-md text-sm font-medium border border-transparent ${mode === 'money' ? 'active shadow-sm' : 'text-gray-600 hover:text-gray-900'}`;
-            
-            const title = document.getElementById('info-title');
-            const content = document.getElementById('info-content');
-            if (mode === 'barter') {
-                title.innerText = "Problemet med Naturalhandel";
-                content.innerHTML = `<p>I PDF-en (s. 32) møter vi Eggebonden. Han må bytte 4 ganger før han får sko.</p><p class="font-semibold mt-2 text-red-600">Resultat: Tregt.</p>`;
-            } else {
-                title.innerText = "Løsningen: Penger";
-                content.innerHTML = `<p>Med penger selger Eggebonden eggene direkte. Handelen skjer umiddelbart.</p><p class="font-semibold mt-2 text-green-600">Resultat: Effektivt!</p>`;
+            /* --- HISTORIE - ROME --- */
+            window.updateCoin = function() {
+                const v = document.getElementById('copper-slider').value;
+                const r = 255 - (v*0.8); const g = 215 - (v*1.1); const b = 0 + (v*0.4);
+                document.getElementById('roman-coin').style.backgroundColor = `rgb(${r},${g},${b})`;
+                document.getElementById('coin-inflation').innerText = Math.round(Math.pow(v, 1.3));
             }
-        }
-        render();
-
-        /* =========================================
-           DEL 2: INFLASJON KALKULATOR
-           ========================================= */
-        function setRate(val) {
-            document.getElementById('input-rate').value = val;
-            updateInflation();
-        }
-
-        function updateInflation() {
-            const startAmount = parseFloat(document.getElementById('input-amount').value);
-            const years = parseInt(document.getElementById('input-years').value);
-            const rate = parseFloat(document.getElementById('input-rate').value);
-
-            document.getElementById('val-years').innerText = years;
-            document.getElementById('val-rate').innerText = rate.toFixed(1);
-            document.getElementById('res-years').innerText = years;
-            document.getElementById('res-start').innerText = startAmount.toLocaleString();
-
-            const futureValue = startAmount / Math.pow(1 + rate/100, years);
-            document.getElementById('res-end').innerText = Math.round(futureValue).toLocaleString();
-            document.getElementById('res-loss').innerText = Math.round(startAmount - futureValue).toLocaleString();
-
-            renderChart(startAmount, years, rate);
-        }
-
-        function renderChart(amount, years, rate) {
-            const container = document.getElementById('inflation-chart');
-            container.innerHTML = '';
-
-            const steps = 10;
-            const yearStep = Math.max(1, Math.floor(years / steps));
             
-            for (let i = 0; i <= years; i += yearStep) {
-                const val = amount / Math.pow(1 + rate/100, i);
-                const heightPercentage = (val / amount) * 100;
-                
-                let colorClass = '#3b82f6';
-                if (rate > 5) colorClass = '#ef4444'; 
-                else if (rate <= 2) colorClass = '#10b981';
-
-                const wrapper = document.createElement('div');
-                wrapper.className = 'bar-wrapper';
-                
-                wrapper.innerHTML = `
-                    <div class="tooltip">År ${i}: ${Math.round(val)} kr</div>
-                    <div class="bar" style="height: ${heightPercentage}%; background-color: ${colorClass}"></div>
-                    <div class="bar-label">År ${i}</div>
-                `;
-                
-                container.appendChild(wrapper);
+            /* --- HISTORIE - BANK --- */
+            let gbGold=100, gbPaper=100, gbTrust=100;
+            window.gullbancLoan = function(e) {
+                if(gbTrust<=0) return;
+                gbPaper += 20; 
+                if(e) spawnFloatText(e.clientX, e.clientY, "+20 Papir", "text-green-600");
+                const ratio = gbGold/gbPaper;
+                if(ratio < 0.5) gbTrust -= 10; if(ratio < 0.3) gbTrust -= 25; if(gbTrust < 0) gbTrust = 0;
+                updateGb();
             }
-        }
+            function updateGb() {
+                document.getElementById('game-gold').innerText = gbGold; document.getElementById('game-paper').innerText = gbPaper; document.getElementById('game-trust').innerText = gbTrust + '%';
+                if(gbTrust<=0) { document.getElementById('game-over-screen').classList.remove('hidden'); document.getElementById('game-over-screen').classList.add('flex'); }
+            }
+            window.resetGullbanc = function() { 
+                gbGold=100; gbPaper=100; gbTrust=100; document.getElementById('game-over-screen').classList.remove('flex'); document.getElementById('game-over-screen').classList.add('hidden'); updateGb(); 
+            }
 
-        updateInflation();
+            /* --- INFLATION --- */
+            window.updateInflation = function() {
+                const r = document.getElementById('input-rate').value;
+                const start = 1000; const end = start / Math.pow(1 + r/100, 20);
+                document.getElementById('val-rate').innerText = r; document.getElementById('res-end').innerText = Math.round(end);
+                const chart = document.getElementById('inflation-chart'); chart.innerHTML = '';
+                for(let i=0; i<=20; i+=2) {
+                    const h = (1 / Math.pow(1 + r/100, i)) * 100;
+                    const bar = document.createElement('div'); bar.className = 'flex-1 bg-red-400 rounded-t hover:bg-red-500 transition-all'; bar.style.height = h + '%'; chart.appendChild(bar);
+                }
+            }
+            
+            /* --- ROSLING --- */
+            const rosData = {
+                1: {i:"🦶", t:"Fattigdom", d:"Du går barføtt. Mål: Kjøpe sko for å unngå sykdom.", c:"bg-red-50"},
+                2: {i:"🚲", t:"Klatrer oppover", d:"Sykkel sparer tid på vannhenting. Du kan ta jobb lenger unna.", c:"bg-orange-50"},
+                3: {i:"🛵", t:"Middelklasse", d:"Motorsykkel gir frihet. Barna får skolegang. Kjøleskap.", c:"bg-blue-50"},
+                4: {i:"✈️", t:"Rik", d:"Bil og flyferier. Du tenker ikke på matprisene.", c:"bg-green-50"}
+            };
+            window.updateRosling = function() {
+                const v = document.getElementById('wealth-slider').value; const d = rosData[v];
+                document.getElementById('rosling-icon').innerText = d.i; document.getElementById('rosling-title').innerText = d.t; document.getElementById('rosling-desc').innerText = d.d;
+                const bg = document.getElementById('rosling-bg'); bg.classList.remove('bg-red-50', 'bg-orange-50', 'bg-blue-50', 'bg-green-50'); bg.classList.add(d.c.replace('bg-', 'bg-'));
+                bg.className = `relative flex-1 rounded-xl shadow-sm border border-cyan-100 mb-6 flex items-center justify-center flex-col p-6 transition-colors duration-500 ${d.c}`;
+            }
+
+            /* --- 8. SAMFUNNSSIMULATOR (STRATEGISK) --- */
+            let simState = { 
+                pop: 20, food: 100, money: 50, price: 10, inflation: 0, 
+                capital: 1, // Production capacity
+                priceControl: false,
+                running: false, paused: false, timer: null, phase: 0 
+            };
+            
+            window.startSim = function() {
+                if(simState.running && !simState.paused) return;
+                
+                if(simState.paused) {
+                     simState.paused = false;
+                     document.getElementById('sim-pause-btn').innerText = "⏸️ Pause";
+                     logSim("Simulering gjenopptatt.", "text-white");
+                } else {
+                    simState.running = true;
+                    logSim("Simulering startet. (Langsom hastighet)", "text-white");
+                    document.getElementById('sim-start-btn').classList.add('hidden');
+                    document.getElementById('sim-pause-btn').classList.remove('hidden');
+                    document.getElementById('sim-modal').classList.add('hidden');
+                }
+                
+                simState.timer = setInterval(simTick, 2000); // 2 Seconds tick
+                updateButtons();
+            }
+
+            window.togglePause = function() {
+                if(!simState.running) return;
+                if(simState.paused) {
+                    // Resume
+                    simState.paused = false;
+                    document.getElementById('sim-pause-btn').innerText = "⏸️ Pause";
+                    document.getElementById('sim-pause-btn').classList.remove('bg-green-600', 'hover:bg-green-500');
+                    document.getElementById('sim-pause-btn').classList.add('bg-yellow-600', 'hover:bg-yellow-500');
+                    simState.timer = setInterval(simTick, 2000);
+                    logSim("Spill gjenopptatt.", "text-gray-400");
+                } else {
+                    // Pause
+                    simState.paused = true;
+                    clearInterval(simState.timer);
+                    document.getElementById('sim-pause-btn').innerText = "▶️ Fortsett";
+                    document.getElementById('sim-pause-btn').classList.remove('bg-yellow-600', 'hover:bg-yellow-500');
+                    document.getElementById('sim-pause-btn').classList.add('bg-green-600', 'hover:bg-green-500');
+                    logSim("Spill pauset.", "text-yellow-400");
+                }
+            }
+            
+            window.resetSim = function() {
+                clearInterval(simState.timer);
+                simState = { pop: 20, food: 100, money: 50, price: 10, inflation: 0, capital: 1, priceControl: false, running: false, paused: false, timer: null, phase: 0 };
+                updateSimUI();
+                logSim("Reset utført.", "text-gray-400");
+                document.getElementById('sim-start-btn').classList.remove('hidden');
+                document.getElementById('sim-pause-btn').classList.add('hidden');
+                document.getElementById('sim-modal').classList.add('hidden');
+                document.getElementById('sim-city-view').innerHTML = '';
+                document.getElementById('sim-progress').style.width = '0%';
+                togglePriceControlUI();
+                updateButtons();
+            }
+            
+            function showSimModal(title, desc, icon, colorClass) {
+                clearInterval(simState.timer);
+                simState.running = false;
+                const modal = document.getElementById('sim-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.getElementById('sim-modal-title').innerText = title;
+                document.getElementById('sim-modal-title').className = `text-3xl font-black mb-2 uppercase ${colorClass}`;
+                document.getElementById('sim-modal-desc').innerText = desc;
+                document.getElementById('sim-modal-icon').innerText = icon;
+                document.getElementById('sim-start-btn').classList.remove('hidden'); // Show start again
+                document.getElementById('sim-pause-btn').classList.add('hidden');
+            }
+
+            function simTick() {
+                // 1. Production (Depends on Capital)
+                let production = simState.capital * 5; 
+                if(simState.priceControl) production = production * 0.4; // Shortages
+                simState.food += production;
+
+                // 2. Consumption
+                const consumption = Math.ceil(simState.pop * 1.5);
+                simState.food -= consumption;
+                
+                // 3. Growth / Starvation
+                if(simState.food < 0) {
+                    simState.food = 0;
+                    simState.pop = Math.floor(simState.pop * 0.9);
+                    logSim("KRISE! Folk sulter.", "text-red-400");
+                    if(simState.pop <= 5) {
+                        showSimModal("Sultkatastrofe", "Matlagrene er tomme. Priskontroll eller mangel på kapital knakk samfunnet.", "☠️", "text-red-500");
+                        return;
+                    }
+                } else if(simState.food > simState.pop * 5) {
+                    simState.pop += 1; 
+                }
+
+                // 4. Economy & Inflation
+                const productivity = simState.pop + (simState.food / 10);
+                let targetPrice = Math.max(10, (simState.money / productivity) * 5); 
+                
+                if(simState.priceControl) {
+                    if(targetPrice > simState.price) logSim("Mangelvarer! Folk hamstrer.", "text-orange-400");
+                } else {
+                    if(simState.price < targetPrice) simState.price += 1;
+                    if(simState.price > targetPrice) simState.price -= 0.5;
+                }
+
+                const basePrice = 10; 
+                simState.inflation = Math.floor(((simState.price - basePrice) / basePrice) * 100);
+
+                if(simState.inflation > 150) {
+                     showSimModal("Hyperinflasjon", "Pengene dine er verdiløse. Samfunnet kollapset.", "💸", "text-red-500");
+                     return;
+                }
+
+                // 5. Progress
+                let score = (simState.pop * 2) + (simState.capital * 50);
+                // Inflation penalty
+                if(simState.inflation > 10) score = score / (simState.inflation / 10);
+                
+                let nextGoal = 100;
+                if(simState.phase === 1) nextGoal = 500;
+                if(simState.phase === 2) nextGoal = 1500;
+                if(simState.phase === 3) nextGoal = 3000;
+                if(simState.phase === 4) nextGoal = 5000;
+                
+                let progressPct = Math.min(100, (score / nextGoal) * 100); 
+                
+                document.getElementById('sim-progress').style.width = progressPct + '%';
+                document.getElementById('sim-score-display').innerText = Math.floor(score);
+                document.getElementById('sim-next-goal').innerText = nextGoal;
+                
+                if(score < 500) { simState.phase = 1; document.getElementById('sim-phase-text').innerText = "Fase 1: Primitiv"; }
+                else if(score < 1500) { simState.phase = 2; document.getElementById('sim-phase-text').innerText = "Fase 2: Vekst"; }
+                else if(score < 3000) { simState.phase = 3; document.getElementById('sim-phase-text').innerText = "Fase 3: Industri"; }
+                else if(score < 5000) { simState.phase = 4; document.getElementById('sim-phase-text').innerText = "Fase 4: Moderne"; }
+                else { simState.phase = 5; document.getElementById('sim-phase-text').innerText = "Fase 5: Fremtid"; }
+
+                if(score >= 5000) {
+                     showSimModal("Sivilisasjon Oppnådd!", "Kapitalisme og sparing skapte velstand!", "🏆", "text-yellow-400");
+                     return;
+                }
+
+                updateSimUI();
+            }
+            
+            window.togglePriceControl = function() {
+                if(!simState.running && !simState.paused) return;
+                simState.priceControl = !simState.priceControl;
+                togglePriceControlUI();
+                if(simState.priceControl) logSim("STATEN: Prisene er frosset!", "text-red-300");
+                else logSim("STATEN: Frislipp av priser.", "text-green-300");
+            }
+
+            function togglePriceControlUI() {
+                const btn = document.getElementById('btn-ctrl-price');
+                const status = document.getElementById('status-price-ctrl');
+                if(simState.priceControl) {
+                    btn.classList.add('border-red-500', 'bg-red-900/20');
+                    btn.classList.remove('bg-slate-700/50', 'border-slate-600');
+                    status.innerText = "PÅ";
+                    status.className = "text-[10px] font-bold bg-red-800 text-white px-2 py-1 rounded animate-pulse";
+                } else {
+                    btn.classList.remove('border-red-500', 'bg-red-900/20');
+                    btn.classList.add('bg-slate-700/50', 'border-slate-600');
+                    status.innerText = "AV";
+                    status.className = "text-[10px] font-bold bg-slate-800 text-gray-500 px-2 py-1 rounded";
+                }
+            }
+
+            window.simAction = function(type, e) {
+                if(!simState.running) return;
+                
+                if(type === 'invest') {
+                    if(simState.money >= 20) {
+                        simState.money -= 20;
+                        simState.capital += 1;
+                        logSim("Investering: Ny fabrikk åpnet!", "text-blue-300");
+                        if(e) spawnFloatText(e.clientX, e.clientY, "+Kapital", "text-blue-400");
+                    } else logSim("Trenger 20 penger.", "text-gray-500");
+                } 
+                else if(type === 'print') {
+                    simState.money += 50;
+                    logSim("Sentralbanken: Penger trykket.", "text-green-300");
+                    if(e) spawnFloatText(e.clientX, e.clientY, "+$$$", "text-green-400");
+                } 
+                else if(type === 'stimulate') {
+                    if(simState.money >= 30) {
+                        simState.money -= 30;
+                        simState.food -= 20; 
+                        logSim("Stimulering: Folk kjøper mer, men sparer ikke.", "text-purple-300");
+                    } else logSim("Ikke nok penger.", "text-gray-500");
+                }
+                updateSimUI();
+            }
+            
+            function updateButtons() {
+                const invest = document.getElementById('btn-invest');
+                const stim = document.getElementById('btn-stim');
+                
+                if(simState.money < 20) invest.classList.add('btn-disabled'); else invest.classList.remove('btn-disabled');
+                if(simState.money < 30) stim.classList.add('btn-disabled'); else stim.classList.remove('btn-disabled');
+            }
+
+            function updateSimUI() {
+                // Numbers
+                document.getElementById('sim-pop').innerText = simState.pop;
+                document.getElementById('sim-food').innerText = Math.floor(simState.food);
+                document.getElementById('sim-money').innerText = simState.money;
+                document.getElementById('sim-price').innerText = Math.floor(simState.price) + " kr";
+                document.getElementById('sim-inflation').innerText = simState.inflation + "%";
+                document.getElementById('sim-capital').innerText = simState.capital;
+
+                // Bars
+                document.getElementById('bar-pop').style.width = Math.min(100, (simState.pop / 200)*100) + '%';
+                document.getElementById('bar-food').style.width = Math.min(100, (simState.food / 500)*100) + '%';
+                document.getElementById('bar-cap').style.width = Math.min(100, (simState.capital / 50)*100) + '%';
+                
+                const infBar = document.getElementById('bar-inf');
+                const infPct = Math.min(100, simState.inflation);
+                infBar.style.width = infPct + '%';
+                if(infPct > 50) infBar.className = "status-bar-fill bg-red-600 danger-alert";
+                else if(infPct > 20) infBar.className = "status-bar-fill bg-orange-500";
+                else infBar.className = "status-bar-fill bg-green-500";
+
+                // Update Button Visuals (Enable/Disable)
+                updateButtons();
+
+                // Visual City
+                const cityGrid = document.getElementById('sim-city-view');
+                const container = document.getElementById('sim-city-container');
+                
+                // Change background based on Phase
+                if(simState.phase === 1) container.className = "bg-stone-800 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 2) container.className = "bg-amber-900/50 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 3) container.className = "bg-slate-700 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 4) container.className = "bg-indigo-900/60 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+                if(simState.phase >= 5) container.className = "bg-fuchsia-900/60 p-4 rounded-xl border border-gray-700 h-64 relative overflow-hidden transition-colors duration-1000";
+
+                // Icons based on Phase and Capital (Wealth)
+                let icon = '⛺'; 
+                if(simState.capital > 5) icon = '🏠';
+                if(simState.capital > 15) icon = '🏭';
+                if(simState.capital > 30) icon = '🏢';
+                if(simState.capital > 50) icon = '🏙️';
+                
+                const numIcons = Math.min(60, Math.ceil(simState.pop / 3));
+                
+                if(cityGrid.childElementCount !== numIcons) {
+                    cityGrid.innerHTML = '';
+                    for(let i=0; i<numIcons; i++) {
+                        const s = document.createElement('div');
+                        s.className = 'sim-item';
+                        s.innerText = icon;
+                        cityGrid.appendChild(s);
+                    }
+                } else if (cityGrid.children.length > 0 && cityGrid.children[0].innerText !== icon) {
+                    Array.from(cityGrid.children).forEach(child => child.innerText = icon);
+                }
+            }
+            
+            function logSim(msg, colorClass="text-gray-300") {
+                const log = document.getElementById('sim-log');
+                const line = document.createElement('div');
+                line.className = `mb-1 ${colorClass}`;
+                line.innerText = "> " + msg;
+                log.prepend(line);
+                if(log.children.length > 10) log.lastChild.remove();
+            }
+
+            // Init
+            resizeCanvas(); drawTrade(); updateDemography(); startMalthus(); updateInflation(); updateRosling();
+        });
     </script>
 </body>
 </html>
